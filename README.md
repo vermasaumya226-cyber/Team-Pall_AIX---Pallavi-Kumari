@@ -103,10 +103,7 @@ powershell
 
 
 cd C:\Users\LOQ\.gemini\antigravity\scratch\study-planner-agent
-python run_server.py   # listens on http://127.0.0.1:8080
-Open the app
-
-http://127.0.0.1:8080/planner.html
+python run_server.py  
 
 Enjoy! Upload a timetable, add subjects, hit Auto‑Generate, and start using the Pomodoro timer.
 
