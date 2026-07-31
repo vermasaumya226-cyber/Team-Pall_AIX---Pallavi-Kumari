@@ -20,7 +20,7 @@ Future Enhancements
 Credits & License
 
 ## This is the vercel URL to open our website :-
-https://study-planner-agent-backup.vercel.app/
+
 ## Overview
 The Study‑Planner‑AI web app helps students optimise their weekly study time:
 
