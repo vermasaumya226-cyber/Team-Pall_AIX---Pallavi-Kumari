@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Student Registration | Personal Study Planner Agent — Pall_AIX</title>
+  <meta name="description" content="AI Biometric Student Registration with live webcam face encoding, duplicate prevention, and secure database storage.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- PAGE TRANSITION OVERLAY -->
+  <div class="page-transition-overlay" id="page-transition">
+    <div class="page-transition-loader"></div>
+    <div style="font-family:var(--font-heading);font-weight:700;font-size:1.1rem;" class="gradient-text" id="page-trans-title">Loading Registration System…</div>
+  </div>
+
+  <canvas id="aurora-canvas"></canvas>
+  <div class="grid-overlay"></div>
+  <div class="mouse-glow" id="mouse-glow"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="container nav-container">
+      <a href="index.html" class="nav-logo">
+        <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+        <span>Study<span class="gradient-text">Planner.AI</span></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="studio.html" class="nav-link">AI Studio</a></li>
+        <li><a href="attendance.html" class="nav-link">Attendance</a></li>
+        <li><a href="register.html" class="nav-link active" style="color:#10B981;font-weight:700;">Register Student</a></li>
+        <li><a href="attendance-history.html" class="nav-link" style="color:#38BDF8;">History</a></li>
+        <li><a href="summarizer.html" class="nav-link">AI Summarizer</a></li>
+        <li><a href="planner.html" class="nav-link">Study Planner</a></li>
+        <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+        <li><a href="analytics.html" class="nav-link">Analytics</a></li>
+      </ul>
+      <a href="attendance.html" class="btn btn-primary btn-sm">
+        <i data-lucide="scan-face"></i> Live Attendance
+      </a>
+    </div>
+  </nav>
+
+  <!-- REGISTRATION SECTION -->
+  <section style="padding-top:7.5rem;padding-bottom:4rem;">
+    <div class="container">
+
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:2.5rem;">
+        <div class="section-tag"><i data-lucide="user-plus"></i> Biometric Enrollment</div>
+        <h1 class="section-title">Student <span class="gradient-text">Registration</span></h1>
+        <p class="section-subtitle">Register new students with webcam face capture. Generates 128D facial feature vectors stored securely in database with duplicate ID & face protection.</p>
+      </div>
+
+      <!-- Quick Navigation Tabs -->
+      <div style="display:flex;justify-content:center;gap:1rem;margin-bottom:2.5rem;">
+        <a href="attendance.html" class="btn btn-secondary btn-sm">
+          <i data-lucide="camera"></i> Live Face Check-In
+        </a>
+        <a href="register.html" class="btn btn-primary btn-sm">
+          <i data-lucide="user-check"></i> Student Registration
+        </a>
+        <a href="attendance-history.html" class="btn btn-secondary btn-sm">
+          <i data-lucide="history"></i> Attendance History
+        </a>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-bottom:2.5rem;">
+
+        <!-- Registration Form -->
+        <div class="glass-card">
+          <h3 style="font-size:1.1rem;display:flex;align-items:center;gap:0.6rem;margin-bottom:1.5rem;color:#38BDF8;">
+            <i data-lucide="id-card"></i> Student Information
+          </h3>
+
+          <form id="student-reg-form" onsubmit="handleRegistrationSubmit(event)">
+            <div style="margin-bottom:1.2rem;">
+              <label style="display:block;font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.4rem;font-weight:600;">Full Name *</label>
+              <input type="text" id="reg-fullname" class="form-control" placeholder="e.g. Rahul Sharma" required />
+            </div>
+
+            <div style="margin-bottom:1.2rem;">
+              <label style="display:block;font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.4rem;font-weight:600;">Student ID *</label>
+              <input type="text" id="reg-studentid" class="form-control" placeholder="e.g. STD-2026-089" required />
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem;">
+              <div>
+                <label style="display:block;font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.4rem;font-weight:600;">Department *</label>
+                <select id="reg-department" class="form-control" required>
+                  <option value="Computer Science">Computer Science</option>
+                  <option value="Electrical Engineering">Electrical Engineering</option>
+                  <option value="Physics">Physics</option>
+                  <option value="Mathematics">Mathematics</option>
+                  <option value="Mechanical Engineering">Mechanical Engineering</option>
+                  <option value="Biotechnology">Biotechnology</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block;font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.4rem;font-weight:600;">Semester *</label>
+                <select id="reg-semester" class="form-control" required>
+                  <option value="Semester 1">Semester 1</option>
+                  <option value="Semester 2">Semester 2</option>
+                  <option value="Semester 3">Semester 3</option>
+                  <option value="Semester 4">Semester 4</option>
+                  <option value="Semester 5" selected>Semester 5</option>
+                  <option value="Semester 6">Semester 6</option>
+                  <option value="Semester 7">Semester 7</option>
+                  <option value="Semester 8">Semester 8</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-bottom:1.2rem;">
+              <label style="display:block;font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.4rem;font-weight:600;">University Email *</label>
+              <input type="email" id="reg-email" class="form-control" placeholder="rahul.sharma@university.edu" required />
+            </div>
+
+            <div style="margin-bottom:1.5rem;">
+              <label style="display:block;font-size:0.85rem;color:var(--text-secondary);margin-bottom:0.4rem;font-weight:600;">Phone Number (Optional)</label>
+              <input type="tel" id="reg-phone" class="form-control" placeholder="+91 98765 43210" />
+            </div>
+
+            <!-- Encoding Badge Indicator -->
+            <div id="reg-face-badge" style="display:none;align-items:center;gap:0.5rem;padding:0.75rem 1rem;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.4);border-radius:10px;color:#34D399;font-size:0.85rem;font-weight:600;margin-bottom:1.5rem;">
+              ✅ 128D Face Encoding Captured
+            </div>
+
+            <!-- Status Alert Container -->
+            <div id="reg-alert" style="display:none;padding:1rem;border-radius:12px;margin-bottom:1.5rem;font-size:0.88rem;"></div>
+
+            <button type="submit" id="reg-submit-btn" class="btn btn-primary" style="width:100%;">
+              <i data-lucide="user-check"></i> Complete Student Registration
+            </button>
+          </form>
+        </div>
+
+        <!-- Webcam Face Capture Viewport -->
+        <div class="glass-card" style="display:flex;flex-direction:column;align-items:center;text-align:center;">
+          <h3 style="font-size:1.1rem;display:flex;align-items:center;gap:0.6rem;margin-bottom:1rem;color:#C084FC;width:100%;text-align:left;">
+            <i data-lucide="camera"></i> Webcam Facial Scanner
+          </h3>
+
+          <div id="fr-video-wrapper" style="position:relative;width:100%;max-width:440px;height:300px;background:#030712;border-radius:16px;overflow:hidden;border:2px dashed rgba(192,132,252,0.3);display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem;">
+            <video id="fr-video" style="width:100%;height:100%;object-fit:cover;transform:scaleX(-1);" autoplay muted playsinline></video>
+            <canvas id="fr-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;transform:scaleX(-1);"></canvas>
+            
+            <div id="fr-loader-overlay" style="display:none;position:absolute;inset:0;background:rgba(3,7,18,0.85);backdrop-filter:blur(8px);flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:20;">
+              <div class="page-transition-loader"></div>
+              <div id="fr-loader-msg" style="color:#C084FC;font-size:0.85rem;font-weight:600;">Processing Face Model…</div>
+            </div>
+
+            <div id="fr-center-timer" style="display:none;position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.75);color:#38BDF8;padding:4px 10px;border-radius:20px;font-size:0.78rem;font-weight:600;border:1px solid rgba(56,189,248,0.3);">
+              Hold Still… 3s
+            </div>
+
+            <div id="fr-status-badge" style="position:absolute;bottom:12px;left:12px;background:rgba(0,0,0,0.75);color:#94A3B8;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:600;">
+              Status: Idle
+            </div>
+          </div>
+
+          <div style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:1.25rem;id:fr-status-msg;">
+            Position face in camera frame, then click <strong>Capture Face Encoding</strong>.
+          </div>
+
+          <div style="display:flex;gap:0.75rem;width:100%;">
+            <button class="btn btn-secondary" style="flex:1;" onclick="frStartCamera()" id="fr-start-btn">
+              <i data-lucide="power"></i> Start Camera
+            </button>
+            <button class="btn btn-primary" style="flex:1;" onclick="frRegisterFace()" id="fr-capture-btn">
+              <i data-lucide="scan"></i> Capture Face Encoding
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Registered Students Directory -->
+      <div class="glass-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem;">
+          <div>
+            <h3 style="font-size:1.1rem;display:flex;align-items:center;gap:0.6rem;">
+              <i data-lucide="users" style="color:#10B981;"></i> Registered Student Directory
+            </h3>
+            <p style="font-size:0.82rem;color:var(--text-muted);margin-top:0.2rem;">Live list of students enrolled in the database with face encodings.</p>
+          </div>
+          <span id="registered-count-badge" style="padding:0.35rem 0.85rem;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);color:#34D399;border-radius:20px;font-size:0.82rem;font-weight:700;">
+            3 Students Enrolled
+          </span>
+        </div>
+
+        <div id="student-directory-list" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:1rem;">
+          <!-- Rendered by JS -->
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <a href="index.html" class="nav-logo">
+          <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+          <span>Study<span class="gradient-text">Planner.AI</span></span>
+        </a>
+        <ul class="footer-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="attendance.html">Attendance</a></li>
+          <li><a href="register.html">Register Student</a></li>
+          <li><a href="attendance-history.html">History</a></li>
+        </ul>
+      </div>
+      <div class="copyright">&copy; 2026 Personal Study Planner Agent — Team Pall_AIX</div>
+    </div>
+  </footer>
+
+  <script src="db.js"></script>
+  <script src="face-recognition.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      FaceRecognitionEngine.init();
+      renderStudentDirectory();
+    });
+
+    function renderStudentDirectory() {
+      const list = document.getElementById('student-directory-list');
+      const badge = document.getElementById('registered-count-badge');
+      if (!list) return;
+
+      const students = (typeof AppDB !== 'undefined') ? AppDB.getStudents() : [];
+      if (badge) badge.textContent = `${students.length} Student${students.length === 1 ? '' : 's'} Enrolled`;
+
+      if (students.length === 0) {
+        list.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:2.5rem;color:var(--text-muted);font-size:0.85rem;">No students registered yet.</div>`;
+        return;
+      }
+
+      const activeUser = (typeof AppDB !== 'undefined') ? AppDB.getUser() : {};
+      list.innerHTML = students.map(s => {
+        const isActive = (s.id || '').trim().toLowerCase() === (activeUser.id || '').trim().toLowerCase();
+        return `
+        <div style="background:${isActive ? 'rgba(56,189,248,0.08)' : 'rgba(255,255,255,0.03)'};border:1px solid ${isActive ? 'rgba(56,189,248,0.4)' : 'var(--border-light)'};border-radius:14px;padding:1.1rem;display:flex;flex-direction:column;gap:0.5rem;">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div>
+              <div style="font-weight:700;font-size:0.95rem;color:var(--text-primary);">${s.name} ${isActive ? '⭐ <span style="font-size:0.7rem;color:#38BDF8;">(Active)</span>' : ''}</div>
+              <div style="font-size:0.78rem;color:#38BDF8;font-weight:600;">${s.id}</div>
+            </div>
+            <span style="font-size:0.7rem;padding:2px 8px;border-radius:10px;background:${s.faceDescriptor ? 'rgba(16,185,129,0.15)' : 'rgba(245,158,11,0.15)'};color:${s.faceDescriptor ? '#34D399' : '#FBBF24'};border:1px solid ${s.faceDescriptor ? 'rgba(16,185,129,0.3)' : 'rgba(245,158,11,0.3)'};">
+              ${s.faceDescriptor ? 'Face Vector ✓' : 'Default Student'}
+            </span>
+          </div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:0.2rem;">
+            🏫 ${s.department} • ${s.semester}
+          </div>
+          <div style="font-size:0.75rem;color:var(--text-muted);display:flex;justify-content:space-between;align-items:center;">
+            <span>✉️ ${s.email}</span>
+            ${!isActive ? `<button onclick="makeActiveStudent('${s.id}')" style="background:rgba(56,189,248,0.15);border:1px solid rgba(56,189,248,0.3);color:#38BDF8;border-radius:8px;padding:2px 8px;font-size:0.7rem;cursor:pointer;">Set Active</button>` : ''}
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    function makeActiveStudent(studentId) {
+      if (typeof AppDB !== 'undefined') {
+        const u = AppDB.setActiveStudent(studentId);
+        if (u) {
+          if (typeof showToast === 'function') showToast(`⭐ Active profile switched to ${u.name} (${u.id})`);
+          renderStudentDirectory();
+        }
+      }
+    }
+
+    function handleRegistrationSubmit(e) {
+      e.preventDefault();
+
+      const name = document.getElementById('reg-fullname').value.trim();
+      const studentId = document.getElementById('reg-studentid').value.trim();
+      const department = document.getElementById('reg-department').value;
+      const semester = document.getElementById('reg-semester').value;
+      const email = document.getElementById('reg-email').value.trim();
+      const phone = document.getElementById('reg-phone')?.value.trim() || '';
+      const alertEl = document.getElementById('reg-alert');
+
+      const faceDesc = FaceRecognitionEngine.getLastCapturedDescriptor();
+
+      const res = AppDB.addStudent({
+        id: studentId,
+        name: name,
+        department: department,
+        semester: semester,
+        email: email,
+        phone: phone,
+        faceDescriptor: faceDesc
+      });
+
+      if (!res.success) {
+        alertEl.style.display = 'block';
+        alertEl.style.background = 'rgba(239,68,68,0.12)';
+        alertEl.style.border = '1px solid rgba(239,68,68,0.3)';
+        alertEl.style.color = '#FCA5A5';
+        alertEl.innerHTML = `⚠️ <strong>Registration Failed:</strong> ${res.error}`;
+        if (typeof showToast === 'function') showToast(`❌ Registration Error: ${res.error}`);
+        return;
+      }
+
+      // Success
+      alertEl.style.display = 'block';
+      alertEl.style.background = 'rgba(16,185,129,0.15)';
+      alertEl.style.border = '1px solid rgba(16,185,129,0.35)';
+      alertEl.style.color = '#34D399';
+      alertEl.innerHTML = `🎉 <strong>Registration Successful!</strong> Student <strong>${name}</strong> (${studentId}) registered in AI database.`;
+
+      document.getElementById('student-reg-form').reset();
+      FaceRecognitionEngine.clearCapturedDescriptor();
+      renderStudentDirectory();
+
+      if (typeof showToast === 'function') showToast(`🎉 Student ${name} registered successfully!`);
+      if (typeof NotificationSystem !== 'undefined') {
+        NotificationSystem.notifyRegistered(name);
+      }
+    }
+  </script>
+
+  <script src="notifications.js"></script>
+</body>

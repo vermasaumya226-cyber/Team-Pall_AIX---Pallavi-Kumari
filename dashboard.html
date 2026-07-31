@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | Study Planner Agent — Pall_AIX</title>
+  <meta name="description" content="Your complete academic dashboard — student profile, study hours, attendance, upcoming classes, exams, assignments, AI recommendations, and quick actions.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- PAGE TRANSITION -->
+  <div class="page-transition-overlay" id="page-transition">
+    <div class="page-transition-loader"></div>
+    <div style="font-family:var(--font-heading);font-weight:700;font-size:1.1rem;" class="gradient-text">Loading Dashboard…</div>
+  </div>
+
+  <canvas id="aurora-canvas"></canvas>
+  <div class="grid-overlay"></div>
+  <div class="mouse-glow" id="mouse-glow"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="container nav-container">
+      <a href="index.html" class="nav-logo">
+        <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+        <span>Study<span class="gradient-text">Planner.AI</span></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="studio.html" class="nav-link">AI Studio</a></li>
+        <li><a href="attendance.html" class="nav-link">Attendance</a></li>
+        <li><a href="register.html" class="nav-link" style="color:#10B981;">Register Student</a></li>
+        <li><a href="attendance-history.html" class="nav-link" style="color:#38BDF8;">History</a></li>
+        <li><a href="summarizer.html" class="nav-link" style="color:#C084FC;">AI Summarizer</a></li>
+        <li><a href="planner.html" class="nav-link">Study Planner</a></li>
+        <li><a href="dashboard.html" class="nav-link active" style="font-weight:700;">Dashboard</a></li>
+        <li><a href="analytics.html" class="nav-link">Analytics</a></li>
+      </ul>
+      <a href="studio.html" class="btn btn-primary btn-sm">
+        <i data-lucide="cpu"></i> AI Studio
+      </a>
+    </div>
+  </nav>
+
+  <!-- DASHBOARD -->
+  <section style="padding-top:7.5rem;padding-bottom:4rem;">
+    <div class="container">
+
+      <!-- ── Welcome Header ── -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;">
+        <div>
+          <div class="section-tag" style="margin-bottom:0.5rem;"><i data-lucide="zap"></i> Live Dashboard</div>
+          <h1 style="font-size:2rem;margin-bottom:0.25rem;">
+            Good <span class="gradient-text" id="dash-greeting">Morning</span>, <span id="dash-name">—</span> 👋
+          </h1>
+          <p style="color:var(--text-secondary);font-size:0.88rem;" id="dash-date">Loading date…</p>
+          <p style="color:var(--text-muted);font-size:0.8rem;margin-top:0.2rem;">
+            <span id="dash-id" style="color:#38BDF8;"></span>&nbsp;·&nbsp;
+            <span id="dash-dept"></span>&nbsp;·&nbsp;
+            <span id="dash-sem"></span>
+          </p>
+          <div id="student-selector-row" style="margin-top:0.4rem;display:flex;align-items:center;gap:0.5rem;">
+            <select id="dash-student-select" onchange="switchDashStudent(this.value)" style="background:rgba(15,23,42,0.8);border:1px solid rgba(56,189,248,0.3);color:#38BDF8;padding:3px 8px;border-radius:8px;font-size:0.75rem;display:none;"></select>
+          </div>
+        </div>
+        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+          <a href="planner.html" class="btn btn-secondary btn-sm"><i data-lucide="calendar"></i> Study Planner</a>
+          <a href="analytics.html" class="btn btn-secondary btn-sm"><i data-lucide="bar-chart-3"></i> Analytics</a>
+          <a href="studio.html" class="btn btn-primary btn-sm"><i data-lucide="sparkles"></i> AI Studio</a>
+        </div>
+      </div>
+
+      <!-- ── Top KPI Stats Row ── -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1.25rem;margin-bottom:1.5rem;" id="kpi-grid">
+        <!-- Populated by JS -->
+        <div class="glass-card" style="padding:1.25rem;text-align:center;"><div class="page-transition-loader" style="margin:auto;"></div></div>
+        <div class="glass-card" style="padding:1.25rem;text-align:center;"><div class="page-transition-loader" style="margin:auto;"></div></div>
+        <div class="glass-card" style="padding:1.25rem;text-align:center;"><div class="page-transition-loader" style="margin:auto;"></div></div>
+        <div class="glass-card" style="padding:1.25rem;text-align:center;"><div class="page-transition-loader" style="margin:auto;"></div></div>
+      </div>
+
+      <!-- ── Study Hours Row ── -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1.25rem;margin-bottom:1.5rem;" id="hours-grid">
+        <div class="glass-card" style="padding:1.25rem;text-align:center;"><div class="page-transition-loader" style="margin:auto;"></div></div>
+        <div class="glass-card" style="padding:1.25rem;text-align:center;"><div class="page-transition-loader" style="margin:auto;"></div></div>
+        <div class="glass-card" style="padding:1.25rem;text-align:center;"><div class="page-transition-loader" style="margin:auto;"></div></div>
+      </div>
+
+      <!-- ── Quick Action Buttons ── -->
+      <div class="glass-card" style="margin-bottom:1.5rem;padding:1.25rem;">
+        <h3 style="font-size:0.95rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;color:var(--text-secondary);">
+          <i data-lucide="zap" style="color:#FBBF24;"></i> Quick Actions
+        </h3>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+          <a href="summarizer.html" class="btn btn-secondary btn-sm" style="border-color:rgba(192,132,252,0.4);color:#C084FC;">
+            <i data-lucide="upload-cloud"></i> Upload Notes
+          </a>
+          <a href="planner.html" class="btn btn-secondary btn-sm" style="border-color:rgba(56,189,248,0.4);color:#38BDF8;">
+            <i data-lucide="calendar"></i> Study Planner
+          </a>
+          <a href="attendance.html" class="btn btn-secondary btn-sm" style="border-color:rgba(16,185,129,0.4);color:#34D399;">
+            <i data-lucide="user-check"></i> Mark Attendance
+          </a>
+          <a href="planner.html" class="btn btn-secondary btn-sm" style="border-color:rgba(245,158,11,0.4);color:#FBBF24;">
+            <i data-lucide="grid-3x3"></i> View Timetable
+          </a>
+          <a href="planner.html#timer" class="btn btn-secondary btn-sm" style="border-color:rgba(52,211,153,0.4);color:#34D399;">
+            <i data-lucide="timer"></i> Start Focus Session
+          </a>
+          <a href="analytics.html" class="btn btn-secondary btn-sm" style="border-color:rgba(124,58,237,0.4);color:#C084FC;">
+            <i data-lucide="bar-chart-2"></i> Analytics
+          </a>
+        </div>
+      </div>
+
+      <!-- ── Main 3-Column Content Grid ── -->
+      <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+
+        <!-- Today's Study Plan -->
+        <div class="glass-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+            <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;">
+              <i data-lucide="list-checks" style="color:#C084FC;"></i> Today's Study Goal & Tasks
+            </h3>
+            <div id="task-completion-badge" style="font-size:0.75rem;padding:3px 10px;border-radius:12px;background:rgba(52,211,153,0.15);color:#34D399;border:1px solid rgba(52,211,153,0.3);">
+              — / — done
+            </div>
+          </div>
+          <div id="today-tasks" style="display:flex;flex-direction:column;gap:0;">
+            <div style="text-align:center;padding:1.5rem;color:var(--text-muted);">
+              <div class="page-transition-loader" style="margin:0 auto 0.75rem;"></div>
+              <div style="font-size:0.82rem;">Loading tasks…</div>
+            </div>
+          </div>
+          <!-- Study Goal Progress -->
+          <div style="margin-top:1rem;padding-top:0.75rem;border-top:1px solid var(--border-light);">
+            <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-muted);margin-bottom:0.3rem;">
+              <span>Today's Study Goal</span>
+              <span id="goal-label">0 / 6h</span>
+            </div>
+            <div style="height:6px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden;">
+              <div id="goal-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#7C3AED,#38BDF8);border-radius:3px;transition:width 0.6s ease;"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Student Profile + Notifications -->
+        <div style="display:flex;flex-direction:column;gap:1.25rem;">
+
+          <!-- Student Profile Card -->
+          <div class="glass-card" style="text-align:center;padding:1.5rem;">
+            <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#06B6D4);display:flex;align-items:center;justify-content:center;margin:0 auto 0.75rem;box-shadow:var(--shadow-glow-purple);">
+              <i data-lucide="user" style="width:36px;height:36px;color:white;"></i>
+            </div>
+            <div class="gradient-text" style="font-size:1.05rem;font-weight:700;" id="profile-name">—</div>
+            <div style="color:var(--text-muted);font-size:0.75rem;margin-bottom:0.5rem;" id="profile-id">—</div>
+            <div style="display:flex;justify-content:center;gap:0.4rem;flex-wrap:wrap;">
+              <span id="profile-dept" style="font-size:0.7rem;padding:2px 8px;background:rgba(56,189,248,0.12);color:#7DD3FC;border:1px solid rgba(56,189,248,0.25);border-radius:10px;"></span>
+              <span id="profile-sem" style="font-size:0.7rem;padding:2px 8px;background:rgba(192,132,252,0.12);color:#D8B4FE;border:1px solid rgba(192,132,252,0.25);border-radius:10px;"></span>
+            </div>
+            <!-- XP / Level Bar -->
+            <div style="margin-top:0.85rem;">
+              <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--text-muted);margin-bottom:0.25rem;">
+                <span id="xp-curr">0 XP</span><span id="xp-next">— XP (Next Level)</span>
+              </div>
+              <div style="height:8px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden;">
+                <div id="xp-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#7C3AED,#C084FC);border-radius:4px;transition:width 0.6s;"></div>
+              </div>
+              <div style="font-size:0.72rem;color:#34D399;margin-top:0.3rem;" id="xp-level">Level 1</div>
+            </div>
+          </div>
+
+          <!-- Smart Notifications -->
+          <div class="glass-card" style="flex:1;">
+            <h3 style="font-size:0.95rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem;">
+              <i data-lucide="bell" style="color:#FBBF24;"></i> AI Recommendations
+            </h3>
+            <div id="notifications-list" style="display:flex;flex-direction:column;gap:0;max-height:260px;overflow-y:auto;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Bottom Grid ── -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.25rem;margin-bottom:1.5rem;">
+
+        <!-- Upcoming Classes -->
+        <div class="glass-card">
+          <h3 style="font-size:0.95rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem;">
+            <i data-lucide="calendar-clock" style="color:#38BDF8;"></i> Upcoming Classes
+          </h3>
+          <div id="upcoming-classes" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+        </div>
+
+        <!-- Upcoming Exams -->
+        <div class="glass-card">
+          <h3 style="font-size:0.95rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem;">
+            <i data-lucide="file-warning" style="color:#EF4444;"></i> Upcoming Exams
+          </h3>
+          <div id="upcoming-exams" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+        </div>
+
+        <!-- Pending Assignments -->
+        <div class="glass-card">
+          <h3 style="font-size:0.95rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem;">
+            <i data-lucide="clipboard-list" style="color:#FBBF24;"></i> Pending Assignments
+          </h3>
+          <div id="pending-assignments" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+        </div>
+      </div>
+
+      <!-- ── Charts + Recent Activity Grid ── -->
+      <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+
+        <!-- Weekly Study Hours Chart -->
+        <div class="glass-card">
+          <h3 style="font-size:0.95rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+            <i data-lucide="bar-chart-3" style="color:#38BDF8;"></i> Weekly Study Hours
+          </h3>
+          <canvas id="dash-chart" style="max-height:200px;"></canvas>
+        </div>
+
+        <!-- Subject Attendance -->
+        <div class="glass-card">
+          <h3 style="font-size:0.95rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem;">
+            <i data-lucide="target" style="color:#34D399;"></i> Subject Attendance
+          </h3>
+          <div id="subject-attendance" style="display:flex;flex-direction:column;gap:0.6rem;"></div>
+        </div>
+      </div>
+
+      <!-- ── Recent Notes + Attendance Activity ── -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+
+        <!-- Recently Uploaded Notes -->
+        <div class="glass-card">
+          <h3 style="font-size:0.95rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem;">
+            <i data-lucide="file-text" style="color:#C084FC;"></i> Recently Uploaded Notes
+          </h3>
+          <div id="recent-notes" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+          <a href="summarizer.html" class="btn btn-secondary btn-sm" style="margin-top:0.75rem;width:100%;">
+            <i data-lucide="plus"></i> Upload New Notes
+          </a>
+        </div>
+
+        <!-- Recent Attendance Activity -->
+        <div class="glass-card">
+          <h3 style="font-size:0.95rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem;">
+            <i data-lucide="activity" style="color:#34D399;"></i> Recent Attendance Activity
+          </h3>
+          <div id="recent-attendance" style="display:flex;flex-direction:column;gap:0.5rem;max-height:260px;overflow-y:auto;"></div>
+          <a href="attendance-history.html" class="btn btn-secondary btn-sm" style="margin-top:0.75rem;width:100%;">
+            <i data-lucide="clock"></i> View Full History
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <a href="index.html" class="nav-logo">
+          <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+          <span>Study<span class="gradient-text">Planner.AI</span></span>
+        </a>
+        <ul class="footer-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="studio.html">AI Studio</a></li>
+          <li><a href="attendance.html">Attendance</a></li>
+          <li><a href="summarizer.html">AI Summarizer</a></li>
+          <li><a href="planner.html">Planner</a></li>
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="analytics.html">Analytics</a></li>
+        </ul>
+      </div>
+      <div class="copyright">&copy; 2026 Personal Study Planner Agent — Team Pall_AIX</div>
+    </div>
+  </footer>
+
+  <script src="db.js"></script>
+  <script src="app.js"></script>
+  <script>
+  /* ===================================================
+     DASHBOARD — Real Data Engine
+     All values sourced from AppDB (localStorage)
+     =================================================== */
+
+  // ── Helpers ──────────────────────────────────────────────
+  function statCard(icon, iconBg, iconColor, value, valueColor, label, sub, subColor) {
+    return `
+      <div class="glass-card" style="padding:1.25rem;text-align:center;">
+        <div style="width:44px;height:44px;border-radius:12px;background:${iconBg};border:1px solid ${iconColor}40;
+             display:flex;align-items:center;justify-content:center;margin:0 auto 0.6rem;">
+          <i data-lucide="${icon}" style="color:${iconColor};"></i>
+        </div>
+        <div style="font-size:1.8rem;font-weight:800;${valueColor ? 'color:'+valueColor : 'background:linear-gradient(135deg,#C084FC,#38BDF8);-webkit-background-clip:text;-webkit-text-fill-color:transparent;'}">
+          ${value}
+        </div>
+        <p style="font-size:0.78rem;color:var(--text-secondary);margin:0.2rem 0;">${label}</p>
+        ${sub ? `<div style="font-size:0.7rem;color:${subColor||'#34D399'};margin-top:0.15rem;">${sub}</div>` : ''}
+      </div>`;
+  }
+
+  function emptyState(msg) {
+    return `<div style="font-size:0.82rem;color:var(--text-muted);padding:0.75rem 0;text-align:center;">${msg}</div>`;
+  }
+
+  function daysUntil(dateStr) {
+    if (!dateStr) return null;
+    const d = Math.ceil((new Date(dateStr) - new Date()) / 86400000);
+    return d;
+  }
+
+  // ── Greeting & Date ───────────────────────────────────────
+  function initGreeting() {
+    const h = new Date().getHours();
+    document.getElementById('dash-greeting').textContent =
+      h < 12 ? 'Morning' : h < 17 ? 'Afternoon' : 'Evening';
+    document.getElementById('dash-date').textContent =
+      new Date().toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+  }
+
+  // ── Student Profile ───────────────────────────────────────
+  function initProfile() {
+    const user = AppDB.getUser() || {};
+    const students = AppDB.getStudents ? AppDB.getStudents() : [];
+    const registeredName = user.name ? user.name : (students.length > 0 ? students[students.length-1].name : 'No students registered yet.');
+
+    document.getElementById('dash-name').textContent    = registeredName;
+    document.getElementById('dash-id').textContent      = user.id ? '🎓 ' + user.id : '🎓 —';
+    document.getElementById('dash-dept').textContent    = user.department || '—';
+    document.getElementById('dash-sem').textContent     = user.semester || '—';
+
+    document.getElementById('profile-name').textContent = registeredName;
+    document.getElementById('profile-id').textContent   = user.id || '—';
+    document.getElementById('profile-dept').textContent = user.department || '—';
+    document.getElementById('profile-sem').textContent  = user.semester || '—';
+
+    // Populate student selector if multiple students exist
+    const sel = document.getElementById('dash-student-select');
+    if (sel) {
+      if (students.length > 0) {
+        sel.style.display = 'inline-block';
+        sel.innerHTML = students.map(s => `
+          <option value="${s.id}" ${(s.id||'').toLowerCase() === (user.id||'').toLowerCase() ? 'selected' : ''}>
+            👤 ${s.name} (${s.id})
+          </option>
+        `).join('');
+      } else {
+        sel.style.display = 'none';
+      }
+    }
+
+    const xp       = user.xp || 0;
+    const nextXp   = user.nextLevelXp || 100;
+    const level    = user.level || 1;
+    const pct      = Math.min(100, Math.round((xp / nextXp) * 100));
+    document.getElementById('xp-curr').textContent  = xp.toLocaleString() + ' XP';
+    document.getElementById('xp-next').textContent  = nextXp.toLocaleString() + ' XP (Lv.' + (level+1) + ')';
+    document.getElementById('xp-bar').style.width   = pct + '%';
+    document.getElementById('xp-level').textContent = `Level ${level} — ${Math.max(0, nextXp - xp)} XP to next level`;
+  }
+
+  function switchDashStudent(id) {
+    if (id && typeof AppDB !== 'undefined') {
+      AppDB.setActiveStudent(id);
+      initProfile();
+      initKPI();
+      initTodayTasks();
+      initSubjectAttendance();
+      if (typeof showToast === 'function') showToast('⭐ Active student profile updated!');
+    }
+  }
+
+  // ── KPI Cards ─────────────────────────────────────────────
+  function initKPI() {
+    const analytics  = AppDB.getAnalytics();
+    const subjects   = AppDB.getSubjects();
+    const attendance = AppDB.getAttendance();
+    const user       = AppDB.getUser();
+
+    // Average attendance across subjects
+    const avgAtt = subjects.length
+      ? (subjects.reduce((s, sub) => s + (sub.attendance || 0), 0) / subjects.length).toFixed(1)
+      : 0;
+
+    // Syllabus completion
+    const avgSyllabus = subjects.length
+      ? Math.round(100 - (subjects.reduce((s, sub) => s + (sub.remainingSyllabus || 0), 0) / subjects.length))
+      : 0;
+
+    // Today's attendance records
+    const today = new Date().toISOString().split('T')[0];
+    const todayAtt = attendance.filter(a => a.date === today).length;
+
+    document.getElementById('kpi-grid').innerHTML =
+      statCard('zap','rgba(124,58,237,0.15)','#C084FC',
+        (user.xp || 0).toLocaleString(), null,
+        'Study XP Earned', `Streak: ${user.streak || 0} days 🔥`, '#34D399') +
+      statCard('clock','rgba(56,189,248,0.15)','#38BDF8',
+        (analytics.totalFocusMinutes ? (analytics.totalFocusMinutes/60).toFixed(1)+'h' : '0h'), '#38BDF8',
+        'Total Study Hours', `Sessions: ${analytics.completedSessions || 0}`, '#38BDF8') +
+      statCard('user-check','rgba(16,185,129,0.15)','#34D399',
+        avgAtt + '%', '#34D399',
+        'Avg. Attendance', avgAtt < 75 ? '⚠️ Below 75% threshold!' : '✅ Above threshold', avgAtt < 75 ? '#EF4444' : '#34D399') +
+      statCard('target','rgba(245,158,11,0.15)','#FBBF24',
+        avgSyllabus + '%', '#FBBF24',
+        'Syllabus Complete',
+        subjects.length ? `${subjects.filter(s=>(s.remainingSyllabus||0)>0).length} subjects pending` : 'No subjects',
+        '#FBBF24');
+  }
+
+  // ── Study Hours Cards ─────────────────────────────────────
+  function initHoursGrid() {
+    const analytics = AppDB.getAnalytics();
+    const dailyH    = analytics.dailyHours || [];
+
+    const today    = new Date().toLocaleDateString('en-US', { weekday:'short' }).slice(0,3);
+    const todayHrs = (dailyH.find(d => d.day === today) || { hours: 0 }).hours;
+
+    const weeklyHrs  = dailyH.reduce((s, d) => s + (d.hours || 0), 0).toFixed(1);
+    const monthlyHrs = ((analytics.totalFocusMinutes || 0) / 60).toFixed(1);
+
+    document.getElementById('hours-grid').innerHTML =
+      statCard('sun','rgba(251,191,36,0.12)','#FBBF24',
+        todayHrs + 'h', '#FBBF24', "Today's Study Hours", 'Goal: 6h daily', '#FBBF24') +
+      statCard('calendar','rgba(56,189,248,0.12)','#38BDF8',
+        weeklyHrs + 'h', '#38BDF8', 'Weekly Study Hours',
+        `${dailyH.length} active days this week`, '#38BDF8') +
+      statCard('database','rgba(124,58,237,0.12)','#C084FC',
+        monthlyHrs + 'h', null, 'Total Focus Hours',
+        `${analytics.completedSessions || 0} Pomodoro sessions`, '#C084FC');
+  }
+
+  // ── Today's Tasks ─────────────────────────────────────────
+  let _tasksCache = [];
+
+  function initTodayTasks() {
+    const plan    = AppDB.getStudyPlan();
+    const today   = new Date().toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 3);
+    const blocks  = (plan && plan[today]) || [];
+
+    _tasksCache = blocks;
+
+    renderTodayTasks();
+  }
+
+  function renderTodayTasks() {
+    const colors = { Critical: '#EF4444', High: '#FBBF24', Normal: '#34D399' };
+    const done   = _tasksCache.filter(t => t.done || t.completed).length;
+    const total  = _tasksCache.length;
+
+    document.getElementById('task-completion-badge').textContent = `${done} / ${total} done`;
+    document.getElementById('goal-label').textContent            = `${done}h / 6h`;
+    document.getElementById('goal-bar').style.width              = Math.min(100, Math.round((done / 6) * 100)) + '%';
+
+    if (_tasksCache.length === 0) {
+      document.getElementById('today-tasks').innerHTML = emptyState('Upload your timetable to generate your study plan.');
+      return;
+    }
+
+    document.getElementById('today-tasks').innerHTML = _tasksCache.map((t, i) => `
+      <div style="display:flex;align-items:center;gap:0.75rem;padding:0.65rem 0;border-bottom:1px solid var(--border-light);cursor:pointer;"
+           onclick="toggleTask(${i})">
+        <div style="width:20px;height:20px;border-radius:50%;border:2px solid ${t.done||t.completed ? '#34D399' : colors[t.priority]||'#38BDF8'};
+             background:${t.done||t.completed ? '#34D399' : 'transparent'};display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.2s;">
+          ${t.done||t.completed ? '<i data-lucide="check" style="width:11px;color:white;"></i>' : ''}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.85rem;font-weight:600;${t.done||t.completed ? 'text-decoration:line-through;color:#64748B;' : ''}">
+            ${t.subject || t.title || '—'} ${t.topic ? '— ' + (t.description || t.topic) : ''}
+          </div>
+          <div style="font-size:0.72rem;color:var(--text-muted);">⏰ ${t.time || t.start || '—'}</div>
+        </div>
+        <span style="font-size:0.68rem;color:${colors[t.priority]||'#38BDF8'};flex-shrink:0;padding:2px 6px;border-radius:6px;background:${colors[t.priority]||'#38BDF8'}18;">
+          ${t.priority || 'Normal'}
+        </span>
+      </div>`).join('');
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function toggleTask(i) {
+    _tasksCache[i].done = _tasksCache[i].completed = !(_tasksCache[i].done || _tasksCache[i].completed);
+    // Persist change
+    const plan  = AppDB.getStudyPlan();
+    const today = new Date().toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 3);
+    if (plan && plan[today] && plan[today][i]) {
+      plan[today][i].done = plan[today][i].completed = _tasksCache[i].done;
+      AppDB.saveStudyPlan(plan);
+    }
+    renderTodayTasks();
+  }
+
+  // ── Notifications / AI Recommendations ───────────────────
+  function initNotifications() {
+    const subjects  = AppDB.getSubjects();
+    const notifs    = AppDB.getNotifications ? AppDB.getNotifications() : [];
+    const recs      = [];
+
+    // Low attendance warnings
+    subjects.filter(s => s.attendance < 75).forEach(s => {
+      recs.push({ icon: '⚠️', text: `<strong>${s.name}</strong> attendance is <strong style="color:#EF4444;">${s.attendance}%</strong> — below 75% threshold!`, color: '#EF4444' });
+    });
+
+    // Upcoming exams
+    subjects.filter(s => s.examDate).sort((a,b) => new Date(a.examDate)-new Date(b.examDate)).slice(0,2).forEach(s => {
+      const d = daysUntil(s.examDate);
+      if (d !== null && d >= 0 && d <= 14) {
+        recs.push({ icon: '📅', text: `<strong>${s.name} Exam</strong> in <strong style="color:#FBBF24;">${d} days</strong> (${s.examDate}). Prioritize revision!`, color: '#FBBF24' });
+      }
+    });
+
+    // Hard subjects
+    subjects.filter(s => s.difficulty === 'Hard').slice(0,1).forEach(s => {
+      recs.push({ icon: '🧠', text: `<strong>${s.name}</strong> marked as <strong>Hard</strong> with ${s.remainingSyllabus || 0}% syllabus remaining. Schedule extra sessions.`, color: '#C084FC' });
+    });
+
+    // DB notifications
+    notifs.filter(n => !n.read).slice(0, 3).forEach(n => {
+      recs.push({ icon: n.type === 'danger' ? '🚨' : n.type === 'success' ? '🎉' : '💡', text: `<strong>${n.title}</strong>: ${n.message}`, color: n.type === 'danger' ? '#EF4444' : n.type === 'success' ? '#34D399' : '#38BDF8' });
+    });
+
+    if (recs.length === 0) {
+      recs.push({ icon: '🔔', text: 'No notifications available yet.', color: '#94A3B8' });
+    }
+
+    document.getElementById('notifications-list').innerHTML = recs.map(r => `
+      <div style="display:flex;align-items:flex-start;gap:0.55rem;padding:0.55rem 0;border-bottom:1px solid var(--border-light);">
+        <span style="font-size:1rem;flex-shrink:0;">${r.icon}</span>
+        <p style="font-size:0.78rem;color:var(--text-secondary);line-height:1.5;">${r.text}</p>
+      </div>`).join('');
+  }
+
+  // ── Upcoming Classes ──────────────────────────────────────
+  function initUpcomingClasses() {
+    const timetable = AppDB.getTimetable();
+    const lectures  = (timetable && timetable.lectures) ? timetable.lectures : [];
+    const box       = document.getElementById('upcoming-classes');
+
+    if (lectures.length === 0) {
+      box.innerHTML = emptyState('Upload your timetable to generate your study plan.');
+      return;
+    }
+
+    box.innerHTML = lectures.slice(0, 4).map(l => `
+      <div style="padding:0.55rem 0.75rem;background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.18);border-radius:10px;">
+        <div style="font-size:0.82rem;font-weight:600;color:var(--text-primary);">${l.subject}</div>
+        <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.15rem;">📅 ${l.day} · ⏰ ${l.start}–${l.end} · 📍 ${l.room || '—'}</div>
+      </div>`).join('');
+  }
+
+  // ── Upcoming Exams ────────────────────────────────────────
+  function initUpcomingExams() {
+    const subjects = AppDB.getSubjects();
+    const box      = document.getElementById('upcoming-exams');
+
+    const exams = subjects.filter(s => s.examDate)
+      .sort((a,b) => new Date(a.examDate) - new Date(b.examDate));
+
+    if (exams.length === 0) {
+      box.innerHTML = emptyState('No upcoming exams found.');
+      return;
+    }
+
+    box.innerHTML = exams.slice(0,4).map(s => {
+      const d    = daysUntil(s.examDate);
+      const dStr = d === null ? '—' : d === 0 ? 'Today!' : d === 1 ? 'Tomorrow' : `${d} days`;
+      const col  = d !== null && d <= 3 ? '#EF4444' : d !== null && d <= 7 ? '#FBBF24' : '#34D399';
+      return `
+        <div style="padding:0.55rem 0.75rem;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.18);border-radius:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:0.82rem;font-weight:600;color:var(--text-primary);">${s.name}</div>
+            <span style="font-size:0.68rem;color:${col};font-weight:700;">${dStr}</span>
+          </div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.12rem;">📅 ${s.examDate} · ${s.priority}</div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Pending Assignments ───────────────────────────────────
+  function initPendingAssignments() {
+    const events = AppDB.getCalendarEvents ? AppDB.getCalendarEvents() : [];
+    const box    = document.getElementById('pending-assignments');
+
+    const pending = events.filter(e => e.type === 'assignment' || e.type === 'deadline');
+
+    if (pending.length === 0) {
+      box.innerHTML = emptyState('No pending assignments.');
+      return;
+    }
+
+    box.innerHTML = pending.slice(0,4).map(e => {
+      const d    = daysUntil(e.date);
+      const dStr = d === null ? '—' : d <= 0 ? 'Overdue!' : `${d}d left`;
+      const col  = d !== null && d <= 1 ? '#EF4444' : d !== null && d <= 3 ? '#FBBF24' : '#38BDF8';
+      return `
+        <div style="padding:0.55rem 0.75rem;background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.18);border-radius:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:0.82rem;font-weight:600;color:var(--text-primary);">${e.title}</div>
+            <span style="font-size:0.68rem;color:${col};font-weight:700;">${dStr}</span>
+          </div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.12rem;">${e.subject || '—'} · ${e.date}</div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Subject Attendance Bars ───────────────────────────────
+  function initSubjectAttendance() {
+    const subjects = AppDB.getSubjects();
+    const box      = document.getElementById('subject-attendance');
+
+    if (subjects.length === 0) {
+      box.innerHTML = emptyState('No attendance records available.');
+      return;
+    }
+
+    box.innerHTML = subjects.map(s => {
+      const pct = s.attendance || 0;
+      const col = pct < 75 ? '#EF4444' : pct < 85 ? '#FBBF24' : '#34D399';
+      return `
+        <div>
+          <div style="display:flex;justify-content:space-between;font-size:0.78rem;margin-bottom:0.25rem;">
+            <span style="color:var(--text-primary);font-weight:500;">${s.name}</span>
+            <span style="color:${col};font-weight:700;">${pct}%${pct < 75 ? ' ⚠️' : ''}</span>
+          </div>
+          <div style="height:5px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:${col};border-radius:3px;transition:width 0.8s ease;"></div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Recent Notes ──────────────────────────────────────────
+  function initRecentNotes() {
+    const notes = AppDB.getNotes ? AppDB.getNotes() : [];
+    const box   = document.getElementById('recent-notes');
+
+    if (notes.length === 0) {
+      box.innerHTML = emptyState('Upload notes to generate summaries.');
+      return;
+    }
+
+    box.innerHTML = notes.slice(0,4).map(n => `
+      <div style="padding:0.6rem 0.75rem;background:rgba(192,132,252,0.06);border:1px solid rgba(192,132,252,0.18);border-radius:10px;
+           display:flex;align-items:center;gap:0.6rem;">
+        <i data-lucide="file-text" style="color:#C084FC;width:16px;flex-shrink:0;"></i>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:0.82rem;font-weight:600;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${n.title}</div>
+          <div style="font-size:0.7rem;color:var(--text-muted);">${n.subject || '—'} · ${n.date || '—'} · ${n.pages || '—'} pages</div>
+        </div>
+      </div>`).join('');
+
+    if (window.lucide) lucide.createIcons();
+  }
+
+  // ── Recent Attendance ─────────────────────────────────────
+  function initRecentAttendance() {
+    const records = AppDB.getAttendance ? AppDB.getAttendance() : [];
+    const box     = document.getElementById('recent-attendance');
+
+    if (records.length === 0) {
+      box.innerHTML = emptyState('No attendance records available.');
+      return;
+    }
+
+    box.innerHTML = records.slice(0, 6).map(r => {
+      const col = r.status === 'Verified' ? '#34D399' : r.status === 'Duplicate' ? '#FBBF24' : '#EF4444';
+      return `
+        <div style="padding:0.55rem 0.75rem;background:rgba(52,211,153,0.05);border:1px solid rgba(52,211,153,0.15);border-radius:10px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="font-size:0.82rem;font-weight:600;color:var(--text-primary);">${r.studentName || r.name || '—'}</div>
+            <span style="font-size:0.68rem;color:${col};font-weight:700;">${r.status}</span>
+          </div>
+          <div style="font-size:0.7rem;color:var(--text-muted);margin-top:0.12rem;">
+            ${r.subject || '—'} · ${r.date || '—'} ${r.time || ''} · ${r.confidence ? r.confidence.toFixed(1)+'%' : ''}
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // ── Weekly Study Chart ────────────────────────────────────
+  let _dashChart = null;
+  function initDashChart() {
+    const analytics = AppDB.getAnalytics();
+    const dailyH    = analytics.dailyHours || [];
+    const labels    = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+    const data      = labels.map(d => (dailyH.find(h => h.day === d) || { hours: 0 }).hours);
+
+    const ctx = document.getElementById('dash-chart');
+    if (!ctx) return;
+    if (_dashChart) { _dashChart.destroy(); }
+
+    _dashChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Study Hours',
+          data,
+          backgroundColor: data.map(v => v >= 5 ? 'rgba(124,58,237,0.75)' : v >= 3 ? 'rgba(56,189,248,0.65)' : 'rgba(100,116,139,0.5)'),
+          borderRadius: 7,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ctx.raw + 'h studied' } } },
+        scales: {
+          x: { ticks: { color: '#64748B' }, grid: { display: false } },
+          y: { ticks: { color: '#64748B', callback: v => v + 'h' }, grid: { color: 'rgba(255,255,255,0.05)' }, beginAtZero: true }
+        }
+      }
+    });
+  }
+
+  // ── Boot ─────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    initGreeting();
+    initProfile();
+    initKPI();
+    initHoursGrid();
+    initTodayTasks();
+    initNotifications();
+    initUpcomingClasses();
+    initUpcomingExams();
+    initPendingAssignments();
+    initSubjectAttendance();
+    initRecentNotes();
+    initRecentAttendance();
+    initDashChart();
+  });
+  </script>
+
+  <script src="notifications.js"></script>
+</body>

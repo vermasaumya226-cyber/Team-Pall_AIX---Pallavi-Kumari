@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance | Personal Study Planner Agent — Pall_AIX</title>
+  <meta name="description" content="AI-powered attendance tracking with face recognition, anti-spoofing verification, subject-wise monitoring, and smart alerts.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- PAGE TRANSITION OVERLAY -->
+  <div class="page-transition-overlay" id="page-transition">
+    <div class="page-transition-loader"></div>
+    <div style="font-family:var(--font-heading);font-weight:700;font-size:1.1rem;" class="gradient-text" id="page-trans-title">Loading Attendance System…</div>
+  </div>
+
+  <canvas id="aurora-canvas"></canvas>
+  <div class="grid-overlay"></div>
+  <div class="mouse-glow" id="mouse-glow"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="container nav-container">
+      <a href="index.html" class="nav-logo">
+        <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+        <span>Study<span class="gradient-text">Planner.AI</span></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="studio.html" class="nav-link">AI Studio</a></li>
+        <li><a href="attendance.html" class="nav-link active">Attendance</a></li>
+        <li><a href="register.html" class="nav-link" style="color:#10B981;">Register Student</a></li>
+        <li><a href="attendance-history.html" class="nav-link" style="color:#38BDF8;">History</a></li>
+        <li><a href="summarizer.html" class="nav-link">AI Summarizer</a></li>
+        <li><a href="planner.html" class="nav-link">Study Planner</a></li>
+        <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+        <li><a href="analytics.html" class="nav-link">Analytics</a></li>
+      </ul>
+      <a href="register.html" class="btn btn-primary btn-sm">
+        <i data-lucide="user-plus"></i> Register Student
+      </a>
+    </div>
+  </nav>
+
+  <!-- ATTENDANCE PAGE -->
+  <section style="padding-top:7.5rem;padding-bottom:4rem;">
+    <div class="container">
+
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:2rem;">
+        <div class="section-tag"><i data-lucide="shield-check"></i> Attendance Guard System</div>
+        <h1 class="section-title">Smart <span class="gradient-text">Face Recognition Check-In</span></h1>
+        <p class="section-subtitle">Real-time facial verification with anti-spoofing blink detection, automatic DB attendance logging, and duplicate entry protection.</p>
+      </div>
+
+      <!-- Quick Navigation Tabs -->
+      <div style="display:flex;justify-content:center;gap:1rem;margin-bottom:2.5rem;">
+        <a href="attendance.html" class="btn btn-primary btn-sm">
+          <i data-lucide="camera"></i> Live Face Check-In
+        </a>
+        <a href="register.html" class="btn btn-secondary btn-sm">
+          <i data-lucide="user-check"></i> Student Registration
+        </a>
+        <a href="attendance-history.html" class="btn btn-secondary btn-sm">
+          <i data-lucide="history"></i> Attendance History
+        </a>
+      </div>
+
+      <!-- Stats Row -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1.25rem;margin-bottom:2rem;">
+        <div class="glass-card" style="text-align:center;padding:1.5rem;">
+          <div class="gradient-text" style="font-size:2.2rem;font-weight:800;" id="att-overall">—</div>
+          <p style="color:var(--text-secondary);font-size:0.82rem;">Overall Attendance</p>
+          <div style="font-size:0.72rem;color:#94A3B8;margin-top:0.3rem;" id="att-overall-label">No records yet</div>
+        </div>
+        <div class="glass-card" style="text-align:center;padding:1.5rem;">
+          <div class="gradient-text-alt" style="font-size:2.2rem;font-weight:800;" id="att-subjects-count">0</div>
+          <p style="color:var(--text-secondary);font-size:0.82rem;">Subjects Tracked</p>
+          <div style="font-size:0.72rem;color:#94A3B8;margin-top:0.3rem;">This Semester</div>
+        </div>
+        <div class="glass-card" style="text-align:center;padding:1.5rem;">
+          <div style="font-size:2.2rem;font-weight:800;color:#FBBF24;" id="att-risk-count">0</div>
+          <p style="color:var(--text-secondary);font-size:0.82rem;">Risk Subjects</p>
+          <div style="font-size:0.72rem;color:#94A3B8;margin-top:0.3rem;" id="att-risk-label">Below 75% threshold</div>
+        </div>
+        <div class="glass-card" style="text-align:center;padding:1.5rem;">
+          <div style="font-size:2.2rem;font-weight:800;color:#38BDF8;" id="att-total-checkins">0</div>
+          <p style="color:var(--text-secondary);font-size:0.82rem;">Classes Verified</p>
+          <div style="font-size:0.72rem;color:#94A3B8;margin-top:0.3rem;">AI Verified Records</div>
+        </div>
+      </div>
+
+      <!-- Main Grid -->
+      <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:1.5rem;margin-bottom:2rem;">
+
+        <!-- Face Recognition Check-In Viewport -->
+        <div class="glass-card">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;">
+            <h3 style="font-size:1.05rem;display:flex;align-items:center;gap:0.5rem;color:#38BDF8;">
+              <i data-lucide="scan-face"></i> AI Face Recognition Scanner
+            </h3>
+            <span id="fr-fps-badge" style="font-size:0.75rem;padding:2px 8px;border-radius:10px;background:rgba(56,189,248,0.15);color:#38BDF8;border:1px solid rgba(56,189,248,0.3);">
+              0 FPS
+            </span>
+          </div>
+
+          <!-- Select Subject for Check-In -->
+          <div style="margin-bottom:1rem;display:flex;gap:0.75rem;align-items:center;">
+            <label style="font-size:0.82rem;color:var(--text-secondary);white-space:nowrap;font-weight:600;">Select Lecture Subject:</label>
+            <select id="face-subject-select" class="form-control" style="font-size:0.85rem;padding:0.4rem 0.75rem;">
+              <option value="General">General</option>
+            </select>
+          </div>
+
+          <!-- Video Scan Viewport -->
+          <div id="fr-video-wrapper" style="position:relative;width:100%;height:320px;background:#030712;border-radius:16px;overflow:hidden;border:2px dashed rgba(56,189,248,0.3);display:flex;align-items:center;justify-content:center;margin-bottom:1.25rem;">
+            <video id="fr-video" style="width:100%;height:100%;object-fit:cover;transform:scaleX(-1);" autoplay muted playsinline></video>
+            <canvas id="fr-canvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;transform:scaleX(-1);"></canvas>
+            
+            <div id="fr-loader-overlay" style="display:none;position:absolute;inset:0;background:rgba(3,7,18,0.85);backdrop-filter:blur(8px);flex-direction:column;align-items:center;justify-content:center;gap:1rem;z-index:20;">
+              <div class="page-transition-loader"></div>
+              <div id="fr-loader-msg" style="color:#38BDF8;font-size:0.85rem;font-weight:600;">Loading Neural Weights…</div>
+            </div>
+
+            <div id="fr-center-timer" style="display:none;position:absolute;top:12px;right:12px;background:rgba(0,0,0,0.75);color:#38BDF8;padding:4px 10px;border-radius:20px;font-size:0.78rem;font-weight:600;border:1px solid rgba(56,189,248,0.3);">
+              Hold Still… 3s
+            </div>
+
+            <div id="fr-result-badge" class="fr-result-badge" style="display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:30;background:rgba(16,185,129,0.9);color:white;padding:1rem 1.5rem;border-radius:16px;align-items:center;gap:0.75rem;font-size:1.1rem;font-weight:700;backdrop-filter:blur(10px);box-shadow:0 0 40px rgba(16,185,129,0.6);">
+              <span>✅ Verified</span>
+            </div>
+
+            <div id="fr-status-badge" style="position:absolute;bottom:12px;left:12px;background:rgba(0,0,0,0.75);color:#94A3B8;padding:4px 12px;border-radius:20px;font-size:0.78rem;font-weight:600;">
+              <span id="fr-status-msg">Camera Idle</span>
+            </div>
+
+            <div id="fr-cam-status" style="position:absolute;top:12px;left:12px;background:rgba(0,0,0,0.75);color:#94A3B8;padding:4px 10px;border-radius:20px;font-size:0.75rem;font-weight:600;">
+              🔴 Off
+            </div>
+          </div>
+
+          <!-- Match Confidence Bar -->
+          <div style="margin-bottom:1.25rem;">
+            <div style="display:flex;justify-content:space-between;font-size:0.78rem;color:var(--text-secondary);margin-bottom:0.3rem;">
+              <span>Face Match Confidence Score:</span>
+              <strong id="fr-confidence-label" style="color:#38BDF8;">0%</strong>
+            </div>
+            <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:3px;overflow:hidden;">
+              <div id="fr-confidence-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#38BDF8,#10B981);transition:width 0.4s ease;"></div>
+            </div>
+          </div>
+
+          <!-- Controls -->
+          <div style="display:flex;gap:0.75rem;">
+            <button class="btn btn-primary" style="flex:1;" onclick="frStartCamera()" id="fr-start-btn">
+              <i data-lucide="power"></i> Activate Camera
+            </button>
+            <button class="btn btn-secondary" style="flex:1;display:none;" onclick="frStopCamera()" id="fr-stop-btn">
+              <i data-lucide="square"></i> Stop Camera
+            </button>
+            <button class="btn btn-secondary" style="flex:1;" onclick="frManualCapture()" id="fr-scan-now-btn">
+              <i data-lucide="scan"></i> Verify Face Now
+            </button>
+          </div>
+
+          <!-- Manual Overide Check-In -->
+          <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid var(--border-light);">
+            <h4 style="font-size:0.85rem;margin-bottom:0.75rem;color:var(--text-secondary);">Manual Attendance Override</h4>
+            <div style="display:flex;gap:0.5rem;">
+              <select id="manual-student-id" class="form-control" style="flex:1.2;font-size:0.82rem;">
+                <option value="">No students registered yet. Register your face first.</option>
+              </select>
+              <button class="btn btn-secondary btn-sm" onclick="markManualAttendance('Verified')">
+                <i data-lucide="check-circle" style="color:#34D399;"></i> Mark Present
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Verification Results & Real-time Log -->
+        <div style="display:flex;flex-direction:column;gap:1.5rem;">
+
+          <!-- Face Verification Result Card (Dynamic Output) -->
+          <div class="glass-card" id="fr-res-container" style="border-color:rgba(56,189,248,0.4);background:rgba(56,189,248,0.04);">
+            <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;color:#38BDF8;">
+              <i data-lucide="user-check"></i> Verification Result Status
+            </h3>
+
+            <div style="display:flex;flex-direction:column;gap:0.75rem;">
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:0.5rem;border-bottom:1px solid rgba(255,255,255,0.06);">
+                <span style="font-size:0.82rem;color:var(--text-muted);">Student Name:</span>
+                <strong style="font-size:0.95rem;color:var(--text-primary);" id="fr-res-name">—</strong>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:0.5rem;border-bottom:1px solid rgba(255,255,255,0.06);">
+                <span style="font-size:0.82rem;color:var(--text-muted);">Student ID:</span>
+                <strong style="font-size:0.9rem;color:#38BDF8;font-family:var(--font-heading);" id="fr-res-id">—</strong>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:0.5rem;border-bottom:1px solid rgba(255,255,255,0.06);">
+                <span style="font-size:0.82rem;color:var(--text-muted);">Department:</span>
+                <span style="font-size:0.85rem;color:var(--text-secondary);" id="fr-res-dept">—</span>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:0.5rem;border-bottom:1px solid rgba(255,255,255,0.06);">
+                <span style="font-size:0.82rem;color:var(--text-muted);">Verification Status:</span>
+                <strong style="font-size:0.88rem;color:#94A3B8;" id="fr-res-status">No face verified yet.</strong>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:0.5rem;border-bottom:1px solid rgba(255,255,255,0.06);">
+                <span style="font-size:0.82rem;color:var(--text-muted);">Date & Time:</span>
+                <span style="font-size:0.82rem;color:var(--text-secondary);" id="fr-res-datetime">—</span>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;">
+                <span style="font-size:0.82rem;color:var(--text-muted);">Match Confidence:</span>
+                <strong style="font-size:0.95rem;color:#34D399;" id="fr-res-confidence">—</strong>
+              </div>
+            </div>
+
+            <div id="fr-res-msg" style="margin-top:1rem;font-size:0.78rem;padding:0.6rem 0.85rem;border-radius:8px;background:rgba(255,255,255,0.05);color:var(--text-secondary);line-height:1.4;">
+              Scan active. Position your face in camera to auto-verify.
+            </div>
+          </div>
+
+          <!-- Subject Attendance Breakdown -->
+          <div class="glass-card">
+            <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+              <i data-lucide="bar-chart-2" style="color:#C084FC;"></i> Subject Attendance Status
+            </h3>
+            <div id="attendance-table">
+              <!-- Rendered by JS -->
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- Real-time Verification Log Activity -->
+      <div class="glass-card" style="margin-bottom:2rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+          <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;">
+            <i data-lucide="activity" style="color:#34D399;"></i> Recent Verification Activity Log
+          </h3>
+          <a href="attendance-history.html" class="btn btn-secondary btn-sm">
+            View Full History <i data-lucide="arrow-right"></i>
+          </a>
+        </div>
+        <div id="attendance-log-list" style="display:flex;flex-direction:column;gap:0.5rem;max-height:220px;overflow-y:auto;">
+          <!-- Log entries appended here -->
+        </div>
+      </div>
+
+      <!-- Attendance Trend Chart -->
+      <div class="glass-card" style="margin-bottom:2rem;">
+        <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1.5rem;">
+          <i data-lucide="trending-up" style="color:#34D399;"></i> Attendance Trend — Last 4 Weeks
+        </h3>
+        <canvas id="attendance-chart" style="max-height:220px;"></canvas>
+      </div>
+
+      <!-- AI Alerts -->
+      <div class="glass-card" style="border-color:rgba(245,158,11,0.3);background:rgba(245,158,11,0.05);">
+        <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+          <i data-lucide="alert-triangle" style="color:#FBBF24;"></i> AI Attendance Threshold Alerts
+        </h3>
+        <div id="alerts-container">
+          <!-- Rendered dynamically by JS -->
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <a href="index.html" class="nav-logo">
+          <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+          <span>Study<span class="gradient-text">Planner.AI</span></span>
+        </a>
+        <ul class="footer-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="attendance.html">Attendance</a></li>
+          <li><a href="register.html">Register Student</a></li>
+          <li><a href="attendance-history.html">History</a></li>
+        </ul>
+      </div>
+      <div class="copyright">&copy; 2026 Personal Study Planner Agent — Team Pall_AIX</div>
+    </div>
+  </footer>
+
+  <script src="db.js"></script>
+  <script src="face-recognition.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      FaceRecognitionEngine.init();
+      populateStudentDropdown();
+      populateSubjectDropdown();
+      renderSubjectTable();
+      renderChart();
+      loadLogActivity();
+      renderStatsCards();
+      renderAlerts();
+    });
+
+    function renderStatsCards() {
+      const subjects = (typeof AppDB !== 'undefined') ? AppDB.getSubjects() : [];
+      const attendance = (typeof AppDB !== 'undefined') ? AppDB.getAttendance() : [];
+
+      // Overall attendance: average of all subject attendance percentages
+      const overallEl = document.getElementById('att-overall');
+      const overallLabelEl = document.getElementById('att-overall-label');
+      const subjectsCountEl = document.getElementById('att-subjects-count');
+      const riskCountEl = document.getElementById('att-risk-count');
+      const riskLabelEl = document.getElementById('att-risk-label');
+      const totalCheckinsEl = document.getElementById('att-total-checkins');
+
+      if (subjectsCountEl) subjectsCountEl.textContent = subjects.length;
+
+      if (subjects.length > 0) {
+        const avg = Math.round(subjects.reduce((s, sub) => s + sub.attendance, 0) / subjects.length);
+        if (overallEl) overallEl.textContent = avg + '%';
+        const aboveThreshold = avg >= 75;
+        if (overallLabelEl) {
+          overallLabelEl.textContent = aboveThreshold ? '✅ Above 75% Threshold' : '⚠️ Below 75% Threshold';
+          overallLabelEl.style.color = aboveThreshold ? '#34D399' : '#FBBF24';
+        }
+        const riskSubjects = subjects.filter(s => s.attendance < 75);
+        if (riskCountEl) riskCountEl.textContent = riskSubjects.length;
+        if (riskLabelEl && riskSubjects.length > 0) {
+          riskLabelEl.textContent = riskSubjects.map(s => `⚠️ ${s.name} (${s.attendance}%)`).join(', ');
+          riskLabelEl.style.color = '#FBBF24';
+        }
+      } else {
+        if (overallEl) overallEl.textContent = '—';
+        if (overallLabelEl) overallLabelEl.textContent = 'No subjects added yet';
+        if (riskCountEl) riskCountEl.textContent = '0';
+      }
+
+      const verifiedCount = attendance.filter(r => r.status === 'Verified').length;
+      if (totalCheckinsEl) totalCheckinsEl.textContent = verifiedCount;
+    }
+
+    function populateStudentDropdown() {
+      const select = document.getElementById('manual-student-id');
+      if (!select) return;
+      const students = (typeof AppDB !== 'undefined') ? AppDB.getStudents() : [];
+      if (students.length === 0) {
+        select.innerHTML = '<option value="">No students registered yet. Register your face first.</option>';
+        return;
+      }
+      select.innerHTML = '<option value="">— Select a student —</option>' + students.map(s =>
+        `<option value="${s.id}">${s.id} — ${s.name}</option>`
+      ).join('');
+    }
+
+    function populateSubjectDropdown() {
+      const select = document.getElementById('face-subject-select');
+      if (!select) return;
+      const subjects = (typeof AppDB !== 'undefined') ? AppDB.getSubjects() : [];
+      if (subjects.length === 0) {
+        select.innerHTML = '<option value="General">General</option>';
+        return;
+      }
+      select.innerHTML = subjects.map(s =>
+        `<option value="${s.name}">${s.name}</option>`
+      ).join('');
+    }
+
+    function renderSubjectTable() {
+      const container = document.getElementById('attendance-table');
+      if (!container) return;
+
+      const subjects = (typeof AppDB !== 'undefined') ? AppDB.getSubjects() : [];
+
+      if (subjects.length === 0) {
+        container.innerHTML = `<div style="text-align:center;padding:1.5rem;color:var(--text-muted);font-size:0.82rem;">No subjects added yet. <a href="planner.html" style="color:#38BDF8;">Add subjects in Study Planner →</a></div>`;
+        return;
+      }
+
+      container.innerHTML = subjects.map(s => {
+        const pct = s.attendance;
+        const color = pct >= 85 ? '#34D399' : pct >= 75 ? '#FBBF24' : '#EF4444';
+        const status = pct >= 85 ? '✅ Safe' : pct >= 75 ? '⚠️ Watch' : '🔴 Critical';
+        return `
+          <div style="padding:0.75rem 0;border-bottom:1px solid var(--border-light);">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.4rem;">
+              <span style="font-size:0.88rem;font-weight:600;">${s.name}</span>
+              <span style="font-size:0.75rem;color:${color};font-weight:700;">${status}</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <div style="flex:1;height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;">
+                <div style="height:100%;width:${pct}%;background:${color};border-radius:4px;transition:width 0.6s ease;"></div>
+              </div>
+              <span style="font-size:0.8rem;color:${color};font-weight:700;min-width:42px;text-align:right;">${pct}%</span>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderChart() {
+      const ctx = document.getElementById('attendance-chart');
+      if (!ctx) return;
+      const subjects = AppDB.getSubjects();
+
+      if (subjects.length === 0) {
+        const parent = ctx.parentElement;
+        if (parent) parent.innerHTML = `<div style="text-align:center;padding:3rem;color:var(--text-muted);font-size:0.85rem;">No attendance records available. Add subjects and mark attendance to view trends.</div>`;
+        return;
+      }
+
+      new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['Week 1','Week 2','Week 3','Week 4'],
+          datasets: subjects.map(s => ({
+            label: s.name,
+            data: [
+              Math.round(s.attendance * 0.9),
+              Math.round(s.attendance * 0.94),
+              Math.round(s.attendance * 0.97),
+              s.attendance
+            ],
+            borderColor: s.color || '#38BDF8',
+            backgroundColor: (s.color || '#38BDF8') + '22',
+            tension: 0.4,
+            fill: false,
+            pointRadius: 4,
+          }))
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { labels: { color: '#CBD5E1', font: { size: 11 } } } },
+          scales: {
+            x: { ticks: { color: '#64748B' }, grid: { color: 'rgba(255,255,255,0.05)' } },
+            y: { min: 50, max: 100, ticks: { color: '#64748B', callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.05)' } }
+          }
+        }
+      });
+    }
+
+    function renderAlerts() {
+      const container = document.getElementById('alerts-container');
+      if (!container) return;
+      const subjects = (typeof AppDB !== 'undefined') ? AppDB.getSubjects() : [];
+
+      const criticalSubjects = subjects.filter(s => s.attendance < 75);
+      const watchSubjects = subjects.filter(s => s.attendance >= 75 && s.attendance < 85);
+
+      if (criticalSubjects.length === 0 && watchSubjects.length === 0) {
+        container.innerHTML = `<div style="text-align:center;padding:1.5rem;color:#34D399;font-size:0.85rem;">✅ All subjects are above the 75% attendance threshold. Great job!</div>`;
+        return;
+      }
+
+      let html = '';
+      criticalSubjects.forEach(s => {
+        const needed = Math.ceil((75 - s.attendance) / (100 - s.attendance) * 10) || 3;
+        html += `
+          <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.85rem;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:12px;margin-bottom:0.75rem;">
+            <i data-lucide="alert-octagon" style="color:#EF4444;width:20px;flex-shrink:0;margin-top:2px;"></i>
+            <div>
+              <strong style="font-size:0.9rem;color:#FCA5A5;">${s.name} — Critical Threshold Warning!</strong>
+              <p style="font-size:0.8rem;color:#CBD5E1;margin-top:0.2rem;">Current: ${s.attendance}% — Below 75% minimum. Attend next classes consistently to recover attendance.</p>
+            </div>
+          </div>`;
+      });
+      watchSubjects.forEach(s => {
+        html += `
+          <div style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.85rem;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;margin-bottom:0.75rem;">
+            <i data-lucide="alert-triangle" style="color:#FBBF24;width:20px;flex-shrink:0;margin-top:2px;"></i>
+            <div>
+              <strong style="font-size:0.9rem;color:#FDE68A;">${s.name} — Watchlist Alert</strong>
+              <p style="font-size:0.8rem;color:#CBD5E1;margin-top:0.2rem;">Current: ${s.attendance}% — Just above the 75% minimum. Missing even one class may put you at risk.</p>
+            </div>
+          </div>`;
+      });
+      container.innerHTML = html;
+      if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+
+    function loadLogActivity() {
+      const container = document.getElementById('attendance-log-list');
+      if (!container) return;
+      const logs = AppDB.getAttendance();
+
+      if (!logs || logs.length === 0) {
+        container.innerHTML = `<div style="text-align:center;padding:1.5rem;color:var(--text-muted);font-size:0.82rem;">No attendance records yet. Start the camera and verify a registered student's face.</div>`;
+        return;
+      }
+
+      container.innerHTML = logs.map(r => `
+        <div class="fr-log-entry ${r.status === 'Verified' ? 'verified' : 'rejected'}" style="padding:0.6rem 0.85rem;background:rgba(255,255,255,0.03);border:1px solid var(--border-light);border-radius:10px;display:flex;justify-content:space-between;align-items:center;font-size:0.8rem;">
+          <span>🕐 ${r.time || '—'} &nbsp;|&nbsp; 👤 <strong>${r.studentName || '—'}</strong> (${r.studentId || '—'}) — ${r.subject || 'General'}</span>
+          <span style="color:${r.status === 'Verified' ? '#34D399' : '#EF4444'};font-weight:700;">${r.status === 'Verified' ? '✅ Verified' : '❌ Rejected'} ${r.confidence || 0}%</span>
+        </div>
+      `).join('');
+    }
+
+    function markManualAttendance(status) {
+      const studentId = document.getElementById('manual-student-id').value;
+      if (!studentId) {
+        if (typeof showToast === 'function') showToast('⚠️ Please select a registered student first.');
+        return;
+      }
+
+      const student = AppDB.getStudentById(studentId);
+      if (!student) {
+        if (typeof showToast === 'function') showToast('❌ Student not found in database. Please re-register.');
+        return;
+      }
+
+      const subject = document.getElementById('face-subject-select').value || 'General';
+
+      const res = AppDB.logAttendance({
+        studentId: student.id,
+        studentName: student.name,
+        department: student.department || 'Unknown',
+        subject: subject,
+        confidence: 98.5,
+        status: status
+      });
+
+      if (res.success) {
+        if (typeof showToast === 'function') showToast(`✅ Attendance marked manually for ${student.name} (${subject})!`);
+        renderSubjectTable();
+        loadLogActivity();
+        renderStatsCards();
+        renderAlerts();
+      } else {
+        if (typeof showToast === 'function') showToast(`⚠️ ${res.reason || res.error}`);
+      }
+    }
+  </script>
+
+  <script src="notifications.js"></script>
+</body>

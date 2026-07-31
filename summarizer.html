@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Notes Summarizer | Study Planner Agent — Pall_AIX</title>
+  <meta name="description" content="Real AI document summarizer — PDF, DOCX, PPT, TXT and scanned image OCR. Auto-detects chapters, formulas, flashcards, MCQs, and exam revision cheat sheets.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- PDF.js for full page-by-page PDF extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <!-- Tesseract.js for scanned image OCR -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <!-- jsPDF for PDF export -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <!-- Mammoth.js for DOCX extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    /* ── Summarizer-specific styles (appended to existing styles.css) ── */
+    .sum-stat-chip {
+      font-size: 0.72rem; font-weight: 600;
+      padding: 3px 10px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid var(--border-light);
+      border-radius: 20px;
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+    .sum-topic-block {
+      margin-bottom: 1.1rem;
+      padding: 0.85rem 1rem;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid var(--border-light);
+      border-left: 3px solid #38BDF8;
+      border-radius: 10px;
+    }
+    .sum-topic-title {
+      display: flex; align-items: center; gap: 0.6rem;
+      font-weight: 700; font-size: 0.92rem;
+      color: var(--text-primary); margin-bottom: 0.5rem;
+    }
+    .sum-topic-num {
+      font-family: var(--font-heading); font-size: 0.75rem;
+      color: #38BDF8; font-weight: 800; min-width: 24px;
+    }
+    .sum-topic-bullets { padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.35rem; }
+    .sum-topic-bullets li { font-size: 0.83rem; color: var(--text-secondary); line-height: 1.55; }
+    .sum-highlight-yellow { background: rgba(251,191,36,0.18); color: #FCD34D; border-radius: 3px; padding: 1px 3px; }
+    .sum-highlight-blue   { background: rgba(56,189,248,0.18); color: #7DD3FC; border-radius: 3px; padding: 1px 3px; }
+    .sum-highlight-purple { background: rgba(192,132,252,0.18); color: #D8B4FE; border-radius: 3px; padding: 1px 3px; }
+    .formula-chip {
+      display: block; padding: 0.6rem 0.85rem;
+      background: rgba(251,191,36,0.08); border: 1px solid rgba(251,191,36,0.25);
+      border-radius: 8px; font-size: 0.82rem; color: #FCD34D;
+      line-height: 1.5; word-break: break-word;
+    }
+    .sum-def-row {
+      padding: 0.6rem 0.85rem;
+      background: rgba(192,132,252,0.07); border: 1px solid rgba(192,132,252,0.2);
+      border-radius: 8px; font-size: 0.82rem; color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .sum-tab.active-tab {
+      background: rgba(124,58,237,0.3) !important;
+      border-color: rgba(124,58,237,0.55) !important;
+      color: #C084FC !important; font-weight: 700;
+    }
+    .sum-view-pane { display: none; }
+    .sum-view-pane.active { display: block; }
+    .upload-zone { cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+    .upload-zone:hover { border-color: rgba(192,132,252,0.6) !important; background: rgba(192,132,252,0.06) !important; }
+  </style>
+</head>
+<body>
+
+  <!-- PAGE TRANSITION -->
+  <div class="page-transition-overlay" id="page-transition">
+    <div class="page-transition-loader"></div>
+    <div style="font-family:var(--font-heading);font-weight:700;font-size:1.1rem;" class="gradient-text" id="page-trans-title">Loading AI Summarizer…</div>
+  </div>
+
+  <canvas id="aurora-canvas"></canvas>
+  <div class="grid-overlay"></div>
+  <div class="mouse-glow" id="mouse-glow"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="container nav-container">
+      <a href="index.html" class="nav-logo">
+        <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+        <span>Study<span class="gradient-text">Planner.AI</span></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="studio.html" class="nav-link">AI Studio</a></li>
+        <li><a href="attendance.html" class="nav-link">Attendance</a></li>
+        <li><a href="register.html" class="nav-link" style="color:#10B981;">Register Student</a></li>
+        <li><a href="attendance-history.html" class="nav-link" style="color:#38BDF8;">History</a></li>
+        <li><a href="summarizer.html" class="nav-link active" style="color:#C084FC;font-weight:700;">AI Summarizer</a></li>
+        <li><a href="planner.html" class="nav-link">Study Planner</a></li>
+        <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+        <li><a href="analytics.html" class="nav-link">Analytics</a></li>
+      </ul>
+      <a href="studio.html" class="btn btn-primary btn-sm">
+        <i data-lucide="cpu"></i> AI Studio
+      </a>
+    </div>
+  </nav>
+
+  <!-- MAIN SUMMARIZER PAGE -->
+  <section style="padding-top:7.5rem;padding-bottom:4rem;">
+    <div class="container">
+
+      <!-- Page Header -->
+      <div style="text-align:center;margin-bottom:2.5rem;">
+        <div class="section-tag"><i data-lucide="file-text"></i> AI Notes Intelligence Engine</div>
+        <h1 class="section-title">AI <span class="gradient-text">Notes Summarizer</span></h1>
+        <p class="section-subtitle">Reads every page of your PDF, DOCX, PPT, TXT, or scanned image. Generates topic-wise summaries, flashcards, MCQs, important questions, and a one-page exam revision sheet.</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:360px 1fr;gap:1.5rem;align-items:start;">
+
+        <!-- ── LEFT PANEL ── -->
+        <div style="display:flex;flex-direction:column;gap:1.25rem;">
+
+          <!-- Upload Card -->
+          <div class="glass-card">
+            <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;color:#C084FC;">
+              <i data-lucide="upload-cloud"></i> Upload Notes Document
+            </h3>
+            <div class="upload-zone" id="sum-drop-zone" onclick="document.getElementById('sum-file-input').click()"
+              style="min-height:155px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+                     border:2px dashed rgba(192,132,252,0.35);border-radius:14px;padding:1.25rem;background:rgba(192,132,252,0.04);">
+              <input type="file" id="sum-file-input" accept=".pdf,.txt,.md,.docx,.doc,.ppt,.pptx,.png,.jpg,.jpeg,.webp,.bmp,.tiff"
+                     style="display:none;" onchange="handleSumFileSelect(event)">
+              <i data-lucide="file-plus" style="width:38px;height:38px;color:#C084FC;margin-bottom:0.55rem;"></i>
+              <h4 style="font-size:0.9rem;margin-bottom:0.25rem;">Drop file here or click to browse</h4>
+              <p style="font-size:0.75rem;color:var(--text-muted);">PDF · DOCX · PPT · TXT · PNG/JPG (OCR)</p>
+              <p style="font-size:0.7rem;color:var(--text-muted);margin-top:0.15rem;">Reads from page 1 to the last page — nothing skipped</p>
+            </div>
+
+            <!-- File info row -->
+            <div id="sum-file-info" style="display:none;margin-top:0.8rem;padding:0.7rem 0.85rem;
+                 background:rgba(192,132,252,0.07);border:1px solid rgba(192,132,252,0.25);border-radius:10px;">
+              <div style="display:flex;align-items:center;gap:0.5rem;">
+                <i data-lucide="file-text" style="color:#C084FC;width:16px;flex-shrink:0;"></i>
+                <strong id="sum-file-name" style="font-size:0.83rem;color:var(--text-primary);word-break:break-all;"></strong>
+              </div>
+              <div id="sum-file-meta" style="font-size:0.72rem;color:#94A3B8;margin-top:0.3rem;"></div>
+            </div>
+          </div>
+
+          <!-- Analysis Mode -->
+          <div class="glass-card">
+            <h3 style="font-size:0.95rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.8rem;color:#38BDF8;">
+              <i data-lucide="sliders"></i> Analysis Mode
+            </h3>
+            <select id="summary-mode-select" class="form-control" style="font-size:0.85rem;">
+              <option value="exam" selected>⚡ Pre-Exam Sprint (Cheat Sheet + Key Points)</option>
+              <option value="deep">📚 Deep Comprehensive (All Chapters + Topics)</option>
+              <option value="formula">📐 Formula & Theorem Focus</option>
+            </select>
+          </div>
+
+          <!-- Summarize Button -->
+          <button class="btn btn-primary" style="width:100%;" onclick="runSummary()" id="sum-generate-btn">
+            <i data-lucide="sparkles"></i> Summarize Document
+          </button>
+
+          <!-- Document Q&A -->
+          <div class="glass-card">
+            <h3 style="font-size:0.95rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.65rem;color:#34D399;">
+              <i data-lucide="message-square"></i> Ask Your Notes
+            </h3>
+            <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:0.75rem;">Answers are sourced <strong style="color:#34D399;">only</strong> from your uploaded document.</p>
+            <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
+              <input type="text" id="doc-qa-input" class="form-control"
+                     placeholder="e.g. Define Newton's second law…"
+                     style="font-size:0.83rem;"
+                     onkeydown="if(event.key==='Enter')doAskQuestion()" />
+              <button class="btn btn-secondary btn-sm" onclick="doAskQuestion()" title="Ask">
+                <i data-lucide="send"></i>
+              </button>
+            </div>
+            <div id="doc-qa-output" style="display:none;padding:0.75rem;background:rgba(255,255,255,0.04);
+                 border:1px solid var(--border-light);border-radius:10px;font-size:0.82rem;line-height:1.55;"></div>
+          </div>
+
+        </div>
+
+        <!-- ── RIGHT PANEL — Result Viewer ── -->
+        <div class="glass-card" style="min-height:560px;position:relative;">
+
+          <!-- Empty Placeholder -->
+          <div id="sum-placeholder" style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+               min-height:520px;text-align:center;color:var(--text-muted);">
+            <i data-lucide="brain-circuit" style="width:72px;height:72px;color:rgba(192,132,252,0.35);margin-bottom:1rem;"></i>
+            <h4 style="color:rgba(255,255,255,0.45);margin-bottom:0.5rem;">Upload notes to generate summaries.</h4>
+            <p style="font-size:0.82rem;max-width:380px;line-height:1.6;">Upload any PDF, DOCX, PPT, TXT, or scanned image to extract topics, formulas, flashcards, and MCQs.</p>
+          </div>
+
+          <!-- Progress Indicator -->
+          <div id="sum-progress-wrap" style="display:none;text-align:center;padding:5rem 2rem;">
+            <div class="page-transition-loader" style="margin:0 auto 1.5rem;"></div>
+            <h4 style="margin-bottom:0.5rem;" class="gradient-text" id="sum-progress-label">Starting AI analysis… 0%</h4>
+            <p style="font-size:0.8rem;color:var(--text-muted);">Full document neural analysis in progress — no pages skipped</p>
+            <div style="width:100%;height:8px;background:rgba(255,255,255,0.07);border-radius:4px;margin-top:1.5rem;overflow:hidden;">
+              <div id="sum-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#7C3AED,#38BDF8,#10B981);border-radius:4px;transition:width 0.3s ease;"></div>
+            </div>
+          </div>
+
+          <!-- ── Result Card ── -->
+          <div id="summarizer-result-card" style="display:none;">
+
+            <!-- Result Header -->
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:0.85rem;flex-wrap:wrap;gap:0.75rem;">
+              <div>
+                <h3 style="font-size:1.05rem;color:var(--text-primary);margin-bottom:0.35rem;" id="summary-file-title">Summary</h3>
+                <div id="sum-doc-stats" style="display:flex;gap:0.4rem;flex-wrap:wrap;"></div>
+              </div>
+              <!-- Export Buttons -->
+              <div id="sum-export-row" style="display:none;gap:0.5rem;flex-wrap:wrap;">
+                <button class="btn btn-secondary btn-sm" onclick="NotesSummarizer.exportAsPDF()">
+                  <i data-lucide="file-text" style="color:#EF4444;"></i> PDF
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="NotesSummarizer.exportAsDocx()">
+                  <i data-lucide="file" style="color:#38BDF8;"></i> DOCX
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="NotesSummarizer.exportAsText()">
+                  <i data-lucide="download" style="color:#34D399;"></i> TXT
+                </button>
+              </div>
+            </div>
+
+            <!-- Core Overview -->
+            <div id="sum-core-text" style="padding:0.8rem 1rem;background:rgba(124,58,237,0.1);
+                 border:1px solid rgba(124,58,237,0.3);border-radius:12px;margin-bottom:1.1rem;
+                 font-size:0.84rem;line-height:1.6;"></div>
+
+            <!-- Tab Bar -->
+            <div id="sum-tab-bar" style="display:flex;gap:0.35rem;flex-wrap:wrap;margin-bottom:1.1rem;
+                 border-bottom:1px solid var(--border-light);padding-bottom:0.7rem;">
+              <button class="btn btn-secondary btn-sm sum-tab active-tab" onclick="switchTab(this,'topics')">📘 Topics</button>
+              <button class="btn btn-secondary btn-sm sum-tab" onclick="switchTab(this,'keypoints')">💡 Key Points</button>
+              <button class="btn btn-secondary btn-sm sum-tab" onclick="switchTab(this,'formulas')">🔢 Formulas</button>
+              <button class="btn btn-secondary btn-sm sum-tab" onclick="switchTab(this,'definitions')">📖 Definitions</button>
+              <button class="btn btn-secondary btn-sm sum-tab" onclick="switchTab(this,'importantq')">❓ Imp. Questions</button>
+              <button class="btn btn-secondary btn-sm sum-tab" onclick="switchTab(this,'examtips')">⚡ Cheat Sheet</button>
+              <button class="btn btn-secondary btn-sm sum-tab" onclick="switchTab(this,'flashcards')">🃏 Flashcards</button>
+              <button class="btn btn-secondary btn-sm sum-tab" onclick="switchTab(this,'mcqs')">📝 MCQs</button>
+            </div>
+
+            <!-- Tab Content -->
+            <div id="sum-tab-content" style="max-height:500px;overflow-y:auto;padding-right:4px;">
+
+              <!-- Topics -->
+              <div id="tab-topics" class="sum-view-pane active">
+                <div id="sum-topics-container"></div>
+              </div>
+
+              <!-- Key Points -->
+              <div id="tab-keypoints" class="sum-view-pane">
+                <h4 style="font-size:0.93rem;color:#38BDF8;margin-bottom:0.75rem;">💡 Key Points & Highlights</h4>
+                <ul id="sum-highlights-list" style="padding-left:1.2rem;display:flex;flex-direction:column;gap:0.45rem;font-size:0.85rem;"></ul>
+              </div>
+
+              <!-- Formulas -->
+              <div id="tab-formulas" class="sum-view-pane">
+                <h4 style="font-size:0.93rem;color:#FBBF24;margin-bottom:0.75rem;">🔢 Formulas, Equations & Theorems</h4>
+                <div id="sum-formulas-box" style="display:flex;flex-direction:column;gap:0.6rem;"></div>
+              </div>
+
+              <!-- Definitions -->
+              <div id="tab-definitions" class="sum-view-pane">
+                <h4 style="font-size:0.93rem;color:#C084FC;margin-bottom:0.75rem;">📖 Core Definitions & Terminology</h4>
+                <div id="sum-defs-box" style="display:flex;flex-direction:column;gap:0.55rem;"></div>
+              </div>
+
+              <!-- Important Questions -->
+              <div id="tab-importantq" class="sum-view-pane">
+                <h4 style="font-size:0.93rem;color:#FBBF24;margin-bottom:0.75rem;">❓ Important Questions (for Exam Prep)</h4>
+                <ol id="sum-important-q-list" style="padding-left:1.2rem;display:flex;flex-direction:column;gap:0.5rem;font-size:0.85rem;line-height:1.55;"></ol>
+              </div>
+
+              <!-- One-Page Cheat Sheet -->
+              <div id="tab-examtips" class="sum-view-pane">
+                <h4 style="font-size:0.93rem;color:#EF4444;margin-bottom:0.75rem;">⚡ One-Page Pre-Exam Revision Cheat Sheet</h4>
+                <ul id="sum-exam-tips-list" style="padding-left:1.2rem;display:flex;flex-direction:column;gap:0.45rem;font-size:0.85rem;"></ul>
+              </div>
+
+              <!-- Flashcards -->
+              <div id="tab-flashcards" class="sum-view-pane">
+                <h4 style="font-size:0.93rem;color:#34D399;margin-bottom:0.75rem;">🃏 Flashcards — Click to Flip</h4>
+                <div id="sum-flashcards-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:0.9rem;"></div>
+              </div>
+
+              <!-- MCQs -->
+              <div id="tab-mcqs" class="sum-view-pane">
+                <h4 style="font-size:0.93rem;color:#38BDF8;margin-bottom:0.75rem;">📝 Multiple Choice Questions</h4>
+                <div id="sum-mcqs-container" style="display:flex;flex-direction:column;gap:1rem;"></div>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <a href="index.html" class="nav-logo">
+          <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+          <span>Study<span class="gradient-text">Planner.AI</span></span>
+        </a>
+        <ul class="footer-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="attendance.html">Attendance</a></li>
+          <li><a href="register.html">Register Student</a></li>
+          <li><a href="summarizer.html">AI Summarizer</a></li>
+        </ul>
+      </div>
+      <div class="copyright">&copy; 2026 Personal Study Planner Agent — Team Pall_AIX</div>
+    </div>
+  </footer>
+
+  <script src="db.js"></script>
+  <script src="notes-summarizer.js"></script>
+  <script src="app.js"></script>
+
+  <script>
+    let _selectedFile = null;
+
+    /* File selection handler */
+    function handleSumFileSelect(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      _selectedFile = file;
+
+      const infoBox = document.getElementById('sum-file-info');
+      const nameEl  = document.getElementById('sum-file-name');
+      const metaEl  = document.getElementById('sum-file-meta');
+
+      if (infoBox) infoBox.style.display = 'block';
+      if (nameEl)  nameEl.textContent = file.name;
+      if (metaEl)  metaEl.textContent = `Size: ${(file.size / 1024).toFixed(1)} KB — All pages will be fully analyzed`;
+    }
+
+    /* Drag and drop support */
+    const dropZone = document.getElementById('sum-drop-zone');
+    if (dropZone) {
+      dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.style.borderColor = '#C084FC'; });
+      dropZone.addEventListener('dragleave', e => { dropZone.style.borderColor = ''; });
+      dropZone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropZone.style.borderColor = '';
+        const file = e.dataTransfer.files[0];
+        if (file) {
+          _selectedFile = file;
+          const infoBox = document.getElementById('sum-file-info');
+          const nameEl  = document.getElementById('sum-file-name');
+          const metaEl  = document.getElementById('sum-file-meta');
+          if (infoBox) infoBox.style.display = 'block';
+          if (nameEl)  nameEl.textContent = file.name;
+          if (metaEl)  metaEl.textContent = `Size: ${(file.size / 1024).toFixed(1)} KB — All pages will be fully analyzed`;
+        }
+      });
+    }
+
+    /* Main trigger */
+    async function runSummary() {
+      if (!_selectedFile) {
+        if (typeof showToast === 'function') showToast('⚠️ Please select a document first!');
+        return;
+      }
+      await NotesSummarizer.processFile(_selectedFile);
+    }
+
+    /* Q&A handler */
+    function doAskQuestion() {
+      const input  = document.getElementById('doc-qa-input');
+      const output = document.getElementById('doc-qa-output');
+      if (!input || !output) return;
+      const q = input.value.trim();
+      if (!q) return;
+
+      const answer = NotesSummarizer.answerQuestionFromNotes(q);
+      output.style.display = 'block';
+      output.innerHTML = answer;
+      input.value = '';
+    }
+
+    /* Tab switcher */
+    function switchTab(btn, tabName) {
+      document.querySelectorAll('.sum-tab').forEach(b => b.classList.remove('active-tab'));
+      btn.classList.add('active-tab');
+      document.querySelectorAll('.sum-view-pane').forEach(p => { p.style.display = 'none'; p.classList.remove('active'); });
+      const target = document.getElementById('tab-' + tabName);
+      if (target) { target.style.display = 'block'; target.classList.add('active'); }
+    }
+  </script>
+
+  <script src="notifications.js"></script>
+</body>

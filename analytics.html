@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics | Personal Study Planner Agent — Pall_AIX</title>
+  <meta name="description" content="Visual analytics for study hours, attendance trends, syllabus progress, and subject performance.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- PAGE TRANSITION OVERLAY -->
+  <div class="page-transition-overlay" id="page-transition">
+    <div class="page-transition-loader"></div>
+    <div style="font-family:var(--font-heading);font-weight:700;font-size:1.1rem;" class="gradient-text">Loading Analytics…</div>
+  </div>
+
+  <canvas id="aurora-canvas"></canvas>
+  <div class="grid-overlay"></div>
+  <div class="mouse-glow" id="mouse-glow"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="container nav-container">
+      <a href="index.html" class="nav-logo">
+        <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+        <span>Study<span class="gradient-text">Planner.AI</span></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="studio.html" class="nav-link" style="color:#38BDF8;font-weight:700;">AI Studio</a></li>
+        <li><a href="attendance.html" class="nav-link">Attendance</a></li>
+        <li><a href="register.html" class="nav-link" style="color:#10B981;">Register Student</a></li>
+        <li><a href="attendance-history.html" class="nav-link" style="color:#38BDF8;">History</a></li>
+        <li><a href="summarizer.html" class="nav-link" style="color:#C084FC;">AI Summarizer</a></li>
+        <li><a href="planner.html" class="nav-link">Study Planner</a></li>
+        <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+        <li><a href="analytics.html" class="nav-link active">Analytics</a></li>
+      </ul>
+      <a href="studio.html" class="btn btn-primary">
+        <i data-lucide="cpu"></i> Open AI Studio
+      </a>
+    </div>
+  </nav>
+
+  <!-- ANALYTICS PAGE -->
+  <section style="padding-top:8rem;padding-bottom:4rem;">
+    <div class="container">
+
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:2rem;">
+        <div class="section-tag"><i data-lucide="bar-chart-3"></i> Performance Intelligence</div>
+        <h1 class="section-title">Visual <span class="gradient-text">Analytics</span></h1>
+        <p class="section-subtitle">Track study hours, attendance trends, syllabus progress, and subject-wise performance with interactive charts.</p>
+      </div>
+
+      <!-- Period & Subject Filters -->
+      <div style="display:flex;justify-content:center;align-items:center;flex-wrap:wrap;gap:0.75rem;margin-bottom:2rem;" id="filter-controls">
+        <div style="display:flex;gap:0.4rem;flex-wrap:wrap;" id="period-tabs">
+          <button class="btn btn-secondary btn-sm analytics-period-btn" id="btn-daily"   onclick="setPeriod('daily',this)">Daily</button>
+          <button class="btn btn-primary  btn-sm analytics-period-btn" id="btn-week"    onclick="setPeriod('week',this)">Weekly</button>
+          <button class="btn btn-secondary btn-sm analytics-period-btn" id="btn-month"  onclick="setPeriod('month',this)">Monthly</button>
+          <button class="btn btn-secondary btn-sm analytics-period-btn" id="btn-semester" onclick="setPeriod('semester',this)">Semester</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:0.5rem;">
+          <label for="analytics-subject-filter" style="font-size:0.8rem;color:var(--text-muted);display:flex;align-items:center;gap:0.3rem;">
+            <i data-lucide="filter" style="width:14px;height:14px;"></i> Subject:
+          </label>
+          <select id="analytics-subject-filter"
+            style="padding:0.4rem 0.8rem;border:1px solid rgba(255,255,255,0.1);background:rgba(15,23,42,0.8);color:#F8FAFC;border-radius:8px;font-size:0.85rem;outline:none;cursor:pointer;"
+            onchange="renderAllAnalytics()">
+            <option value="all">All Subjects</option>
+          </select>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="renderAllAnalytics()" style="display:flex;align-items:center;gap:0.4rem;">
+          <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Refresh
+        </button>
+      </div>
+
+      <!-- KPI Cards Row -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.25rem;margin-bottom:1.5rem;">
+        <div class="glass-card" style="padding:1.25rem;text-align:center;">
+          <div class="gradient-text" style="font-size:2rem;font-weight:800;" id="kpi-hours">—h</div>
+          <p style="font-size:0.78rem;color:var(--text-secondary);">Total Study Hours</p>
+          <div style="font-size:0.7rem;color:#34D399;" id="kpi-hours-trend">Loading…</div>
+        </div>
+        <div class="glass-card" style="padding:1.25rem;text-align:center;">
+          <div class="gradient-text-alt" style="font-size:2rem;font-weight:800;" id="kpi-att">—%</div>
+          <p style="font-size:0.78rem;color:var(--text-secondary);">Avg. Attendance</p>
+          <div style="font-size:0.7rem;" id="kpi-att-status">Loading…</div>
+        </div>
+        <div class="glass-card" style="padding:1.25rem;text-align:center;">
+          <div style="font-size:2rem;font-weight:800;color:#FBBF24;" id="kpi-syllabus">—%</div>
+          <p style="font-size:0.78rem;color:var(--text-secondary);">Syllabus Complete</p>
+          <div style="font-size:0.7rem;color:#FBBF24;" id="kpi-syllabus-sub">Loading…</div>
+        </div>
+        <div class="glass-card" style="padding:1.25rem;text-align:center;">
+          <div style="font-size:2rem;font-weight:800;color:#34D399;" id="kpi-productivity">—%</div>
+          <p style="font-size:0.78rem;color:var(--text-secondary);">Productivity Score</p>
+          <div style="font-size:0.7rem;color:#C084FC;" id="kpi-focus-sub">Loading…</div>
+        </div>
+        <div class="glass-card" style="padding:1.25rem;text-align:center;">
+          <div style="font-size:2rem;font-weight:800;color:#38BDF8;" id="kpi-streak">—d</div>
+          <p style="font-size:0.78rem;color:var(--text-secondary);">Study Streak 🔥</p>
+          <div style="font-size:0.7rem;color:#38BDF8;" id="kpi-streak-sub">Loading…</div>
+        </div>
+      </div>
+
+      <!-- Charts Row 1: Study Hours + Subject Distribution -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+
+        <div class="glass-card">
+          <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+            <i data-lucide="bar-chart-2" style="color:#C084FC;"></i>
+            <span id="hours-chart-title">Weekly Study Time Graph</span>
+          </h3>
+          <div style="position:relative;height:230px;">
+            <canvas id="chart-hours"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+            <i data-lucide="pie-chart" style="color:#38BDF8;"></i> Subject-wise Study Distribution
+          </h3>
+          <div style="position:relative;height:230px;">
+            <canvas id="chart-subjects"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Charts Row 2: Attendance Trend + Syllabus Radar -->
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+
+        <div class="glass-card">
+          <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+            <i data-lucide="trending-up" style="color:#34D399;"></i> Attendance Trend Graph
+          </h3>
+          <div style="position:relative;height:230px;">
+            <canvas id="chart-attendance"></canvas>
+          </div>
+        </div>
+
+        <div class="glass-card">
+          <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+            <i data-lucide="target" style="color:#FBBF24;"></i> Completed vs Remaining Syllabus
+          </h3>
+          <div style="position:relative;height:230px;">
+            <canvas id="chart-radar"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Productivity Heatmap -->
+      <div class="glass-card" style="margin-bottom:1.5rem;">
+        <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1.25rem;">
+          <i data-lucide="grid-3x3" style="color:#C084FC;"></i> Study Productivity Heatmap — Last 7 Weeks
+        </h3>
+        <div id="heatmap-container" style="overflow-x:auto;"></div>
+        <div style="display:flex;align-items:center;gap:0.5rem;margin-top:0.75rem;font-size:0.75rem;color:var(--text-muted);">
+          <span>Less</span>
+          <div style="display:flex;gap:3px;">
+            <div style="width:12px;height:12px;border-radius:2px;background:rgba(124,58,237,0.1);"></div>
+            <div style="width:12px;height:12px;border-radius:2px;background:rgba(124,58,237,0.3);"></div>
+            <div style="width:12px;height:12px;border-radius:2px;background:rgba(124,58,237,0.55);"></div>
+            <div style="width:12px;height:12px;border-radius:2px;background:rgba(124,58,237,0.8);"></div>
+            <div style="width:12px;height:12px;border-radius:2px;background:#7C3AED;"></div>
+          </div>
+          <span>More</span>
+        </div>
+      </div>
+
+      <!-- Subject Performance + AI Insights Row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.5rem;">
+
+        <!-- Weak vs Strong Subject Performance -->
+        <div class="glass-card">
+          <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+            <i data-lucide="shield-alert" style="color:#F59E0B;"></i> Subject Performance Analysis
+          </h3>
+          <div id="subject-performance-list">
+            <div style="text-align:center;padding:1.5rem;color:var(--text-muted);">
+              <div class="page-transition-loader" style="margin:0 auto 0.5rem;"></div>
+              <div style="font-size:0.82rem;">Loading subjects…</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Performance Insights -->
+        <div class="glass-card">
+          <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+            <i data-lucide="sparkles" style="color:#38BDF8;"></i> AI Performance Insights
+          </h3>
+          <div id="ai-insights-list">
+            <div style="text-align:center;padding:1.5rem;color:var(--text-muted);">
+              <div class="page-transition-loader" style="margin:0 auto 0.5rem;"></div>
+              <div style="font-size:0.82rem;">Generating insights…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subject-wise Attendance Bars -->
+      <div class="glass-card" style="margin-bottom:1.5rem;">
+        <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+          <i data-lucide="activity" style="color:#34D399;"></i> Subject-wise Attendance
+        </h3>
+        <div id="subject-att-bars" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
+      </div>
+
+      <!-- Revision Progress Row -->
+      <div class="glass-card">
+        <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+          <i data-lucide="book-open" style="color:#C084FC;"></i> Revision Progress
+        </h3>
+        <div id="revision-progress" style="display:flex;flex-direction:column;gap:0.75rem;"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <a href="index.html" class="nav-logo">
+          <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+          <span>Study<span class="gradient-text">Planner.AI</span></span>
+        </a>
+        <ul class="footer-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="studio.html">AI Studio</a></li>
+          <li><a href="attendance.html">Attendance</a></li>
+          <li><a href="summarizer.html">AI Summarizer</a></li>
+          <li><a href="planner.html">Planner</a></li>
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="analytics.html">Analytics</a></li>
+        </ul>
+      </div>
+      <div class="copyright">&copy; 2026 Personal Study Planner Agent — Team Pall_AIX</div>
+    </div>
+  </footer>
+
+  <script src="db.js"></script>
+  <script src="analytics-dashboard.js"></script>
+  <script src="app.js"></script>
+
+  <script src="notifications.js"></script>
+</body>

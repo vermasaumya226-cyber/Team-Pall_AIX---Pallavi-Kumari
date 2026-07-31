@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile | Personal Study Planner Agent — Pall_AIX</title>
+  <meta name="description" content="Manage your student profile, academic goals, subjects, and personal information.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- PAGE TRANSITION OVERLAY -->
+  <div class="page-transition-overlay" id="page-transition">
+    <div class="page-transition-loader"></div>
+    <div style="font-family:var(--font-heading);font-weight:700;font-size:1.1rem;" class="gradient-text">Loading Profile…</div>
+  </div>
+
+  <canvas id="aurora-canvas"></canvas>
+  <div class="grid-overlay"></div>
+  <div class="mouse-glow" id="mouse-glow"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="container nav-container">
+      <a href="index.html" class="nav-logo">
+        <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+        <span>Study<span class="gradient-text">Planner.AI</span></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="studio.html" class="nav-link" style="color:#38BDF8;font-weight:700;">AI Studio</a></li>
+        <li><a href="attendance.html" class="nav-link">Attendance</a></li>
+        <li><a href="register.html" class="nav-link" style="color:#10B981;">Register Student</a></li>
+        <li><a href="attendance-history.html" class="nav-link" style="color:#38BDF8;">History</a></li>
+        <li><a href="summarizer.html" class="nav-link" style="color:#C084FC;">AI Summarizer</a></li>
+        <li><a href="planner.html" class="nav-link">Study Planner</a></li>
+        <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+        <li><a href="analytics.html" class="nav-link">Analytics</a></li>
+      </ul>
+      <a href="studio.html" class="btn btn-primary">
+        <i data-lucide="cpu"></i> Open AI Studio
+      </a>
+    </div>
+  </nav>
+
+  <!-- PROFILE PAGE -->
+  <section style="padding-top:8rem;padding-bottom:4rem;">
+    <div class="container">
+
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:2rem;">
+        <div class="section-tag"><i data-lucide="user-circle"></i> Student Identity</div>
+        <h1 class="section-title">Your <span class="gradient-text">Profile</span></h1>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 2fr;gap:1.5rem;align-items:start;">
+
+        <!-- Left: Avatar & Stats -->
+        <div>
+          <!-- Avatar Card -->
+          <div class="glass-card" style="text-align:center;margin-bottom:1.25rem;">
+            <div style="position:relative;display:inline-block;margin-bottom:1rem;">
+              <div style="width:96px;height:96px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#06B6D4);display:flex;align-items:center;justify-content:center;margin:0 auto;box-shadow:var(--shadow-glow-purple);font-size:2.5rem;">
+                🎓
+              </div>
+              <button onclick="document.getElementById('avatar-input').click()"
+                style="position:absolute;bottom:0;right:0;width:28px;height:28px;border-radius:50%;background:#7C3AED;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:white;">
+                <i data-lucide="camera" style="width:14px;height:14px;"></i>
+              </button>
+              <input type="file" id="avatar-input" accept="image/*" style="display:none;" onchange="updateAvatar(event)">
+            </div>
+            <h3 style="font-size:1.2rem;" id="profile-name-display">Rahul Sharma</h3>
+            <p style="font-size:0.82rem;color:var(--text-muted);" id="profile-course-display">B.Tech — Computer Science, Sem 5</p>
+            <div class="gradient-text" style="font-size:0.85rem;font-weight:600;margin-top:0.35rem;">Level 12 · Academic Elite</div>
+
+            <!-- XP Bar -->
+            <div style="margin:1rem 0 0.35rem;">
+              <div style="height:8px;background:rgba(255,255,255,0.08);border-radius:4px;overflow:hidden;">
+                <div style="height:100%;width:82%;background:linear-gradient(90deg,#7C3AED,#C084FC);border-radius:4px;"></div>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--text-muted);margin-top:0.3rem;">
+                <span>2,450 XP</span><span>Level 13 at 3,000 XP</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Achievements -->
+          <div class="glass-card" style="margin-bottom:1.25rem;">
+            <h4 style="font-size:0.9rem;margin-bottom:0.75rem;display:flex;align-items:center;gap:0.4rem;">
+              <i data-lucide="award" style="color:#FBBF24;"></i> Achievements
+            </h4>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;">
+              <div title="14-day streak" style="text-align:center;background:rgba(255,255,255,0.04);border-radius:10px;padding:0.6rem;">
+                <div style="font-size:1.6rem;">🔥</div>
+                <div style="font-size:0.62rem;color:#94A3B8;margin-top:0.2rem;">Streak Pro</div>
+              </div>
+              <div title="AI Summarizer" style="text-align:center;background:rgba(255,255,255,0.04);border-radius:10px;padding:0.6rem;">
+                <div style="font-size:1.6rem;">🧠</div>
+                <div style="font-size:0.62rem;color:#94A3B8;margin-top:0.2rem;">AI Scholar</div>
+              </div>
+              <div title="100 sessions" style="text-align:center;background:rgba(255,255,255,0.04);border-radius:10px;padding:0.6rem;">
+                <div style="font-size:1.6rem;">⚡</div>
+                <div style="font-size:0.62rem;color:#94A3B8;margin-top:0.2rem;">Century</div>
+              </div>
+              <div title="Perfect week" style="text-align:center;background:rgba(255,255,255,0.04);border-radius:10px;padding:0.6rem;">
+                <div style="font-size:1.6rem;">🏆</div>
+                <div style="font-size:0.62rem;color:#94A3B8;margin-top:0.2rem;">Perfect Week</div>
+              </div>
+              <div title="Night owl" style="text-align:center;background:rgba(255,255,255,0.04);border-radius:10px;padding:0.6rem;">
+                <div style="font-size:1.6rem;">🦉</div>
+                <div style="font-size:0.62rem;color:#94A3B8;margin-top:0.2rem;">Night Owl</div>
+              </div>
+              <div style="text-align:center;background:rgba(255,255,255,0.02);border-radius:10px;padding:0.6rem;border:1px dashed rgba(255,255,255,0.1);">
+                <div style="font-size:1.6rem;opacity:0.3;">🔒</div>
+                <div style="font-size:0.62rem;color:#475569;margin-top:0.2rem;">Locked</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Quick Stats -->
+          <div class="glass-card">
+            <h4 style="font-size:0.9rem;margin-bottom:0.75rem;display:flex;align-items:center;gap:0.4rem;">
+              <i data-lucide="activity" style="color:#38BDF8;"></i> Quick Stats
+            </h4>
+            <div style="display:flex;flex-direction:column;gap:0.5rem;">
+              <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+                <span style="color:var(--text-muted);">Total Study Hours</span><strong>346h</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+                <span style="color:var(--text-muted);">Current Streak</span><strong style="color:#34D399;">14 days 🔥</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+                <span style="color:var(--text-muted);">Tasks Completed</span><strong>248</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+                <span style="color:var(--text-muted);">AI Summaries</span><strong style="color:#C084FC;">12</strong>
+              </div>
+              <div style="display:flex;justify-content:space-between;font-size:0.82rem;">
+                <span style="color:var(--text-muted);">Attendance Avg.</span><strong style="color:#38BDF8;">88.5%</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Edit Form -->
+        <div class="glass-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;">
+            <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;">
+              <i data-lucide="edit-3" style="color:#C084FC;"></i> Edit Profile
+            </h3>
+            <button class="btn btn-primary btn-sm" onclick="saveProfile()">
+              <i data-lucide="save"></i> Save Changes
+            </button>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1rem;">
+            <div>
+              <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Full Name</label>
+              <input class="form-control" id="prof-name" value="Rahul Sharma" type="text">
+            </div>
+            <div>
+              <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Student ID</label>
+              <input class="form-control" id="prof-id" value="CSE2024-087" type="text">
+            </div>
+            <div>
+              <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Email</label>
+              <input class="form-control" id="prof-email" value="rahul.s@college.edu" type="email">
+            </div>
+            <div>
+              <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Phone</label>
+              <input class="form-control" id="prof-phone" value="+91 98765 43210" type="text">
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;margin-bottom:1rem;">
+            <div>
+              <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Course</label>
+              <select class="form-control" id="prof-course">
+                <option selected>B.Tech</option>
+                <option>B.Sc</option>
+                <option>M.Tech</option>
+                <option>MBA</option>
+                <option>BCA</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Branch</label>
+              <input class="form-control" id="prof-branch" value="Computer Science" type="text">
+            </div>
+            <div>
+              <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Semester</label>
+              <select class="form-control" id="prof-sem">
+                <option>1</option><option>2</option><option>3</option><option>4</option>
+                <option selected>5</option><option>6</option><option>7</option><option>8</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-bottom:1rem;">
+            <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">College / University</label>
+            <input class="form-control" id="prof-college" value="Indian Institute of Technology" type="text">
+          </div>
+
+          <div style="margin-bottom:1rem;">
+            <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Academic Goal</label>
+            <textarea class="form-control" id="prof-goal" rows="2" style="resize:vertical;">Achieve 90%+ grades across all subjects while maintaining 85%+ attendance and completing all projects ahead of deadline.</textarea>
+          </div>
+
+          <hr style="border-color:var(--border-light);margin:1.25rem 0;">
+          <h4 style="font-size:0.9rem;margin-bottom:0.75rem;display:flex;align-items:center;gap:0.4rem;">
+            <i data-lucide="sliders" style="color:#38BDF8;"></i> Study Preferences
+          </h4>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+            <div>
+              <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Daily Study Goal (hours)</label>
+              <input class="form-control" type="number" id="prof-goal-hrs" value="6" min="1" max="16">
+            </div>
+            <div>
+              <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Minimum Attendance Target</label>
+              <select class="form-control" id="prof-att-target">
+                <option>75%</option>
+                <option selected>80%</option>
+                <option>85%</option>
+                <option>90%</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Preferred Study Time</label>
+              <select class="form-control" id="prof-study-time">
+                <option>Early Morning (5–8 AM)</option>
+                <option>Morning (8–12 PM)</option>
+                <option selected>Afternoon + Evening</option>
+                <option>Night (9 PM–1 AM)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:0.78rem;color:var(--text-muted);display:block;margin-bottom:0.3rem;">Learning Style</label>
+              <select class="form-control" id="prof-learning">
+                <option>Visual Learner</option>
+                <option selected>Mixed — Visual + Text</option>
+                <option>Audio Learner</option>
+                <option>Practice-first</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="profile-save-toast" style="display:none;margin-top:1rem;padding:0.75rem;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:10px;font-size:0.85rem;color:#34D399;">
+            ✅ Profile saved successfully!
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <a href="index.html" class="nav-logo">
+          <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+          <span>Study<span class="gradient-text">Planner.AI</span></span>
+        </a>
+        <ul class="footer-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="studio.html">AI Studio</a></li>
+          <li><a href="attendance.html">Attendance</a></li>
+          <li><a href="summarizer.html">AI Summarizer</a></li>
+          <li><a href="planner.html">Planner</a></li>
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="analytics.html">Analytics</a></li>
+        </ul>
+      </div>
+      <div class="copyright">&copy; 2026 Personal Study Planner Agent — Team Pall_AIX</div>
+    </div>
+  </footer>
+
+  <script src="db.js"></script>
+  <script src="app.js"></script>
+  <script>
+    function saveProfile() {
+      const name = document.getElementById('prof-name').value;
+      const course = document.getElementById('prof-course').value;
+      const branch = document.getElementById('prof-branch').value;
+      const sem = document.getElementById('prof-sem').value;
+      document.getElementById('profile-name-display').textContent = name;
+      document.getElementById('profile-course-display').textContent = `${course} — ${branch}, Sem ${sem}`;
+      const toast = document.getElementById('profile-save-toast');
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
+
+    function updateAvatar(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      const avatar = document.querySelector('.logo-icon').parentElement;
+      // Just show toast since we can't update emoji easily
+    }
+  </script>
+
+  <script src="notifications.js"></script>
+</body>

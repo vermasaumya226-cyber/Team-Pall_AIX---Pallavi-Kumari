@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings | Personal Study Planner Agent — Pall_AIX</title>
+  <meta name="description" content="Customize notifications, AI preferences, theme, data management, and app behavior.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .settings-section { margin-bottom: 1.5rem; }
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.9rem 0;
+      border-bottom: 1px solid var(--border-light);
+      gap: 1rem;
+    }
+    .settings-row:last-child { border-bottom: none; }
+    .settings-label { font-size: 0.88rem; font-weight: 600; }
+    .settings-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.15rem; }
+    .toggle-switch {
+      position: relative; display: inline-block;
+      width: 42px; height: 24px; flex-shrink: 0;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(255,255,255,0.1);
+      border-radius: 24px;
+      transition: 0.3s;
+    }
+    .toggle-slider:before {
+      position: absolute; content: "";
+      height: 18px; width: 18px; left: 3px; bottom: 3px;
+      background: white; border-radius: 50%;
+      transition: 0.3s;
+    }
+    .toggle-switch input:checked + .toggle-slider { background: #7C3AED; }
+    .toggle-switch input:checked + .toggle-slider:before { transform: translateX(18px); }
+    .color-swatch {
+      width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+      border: 2px solid transparent; transition: all 0.2s;
+    }
+    .color-swatch.active, .color-swatch:hover {
+      border-color: white; transform: scale(1.15);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- PAGE TRANSITION OVERLAY -->
+  <div class="page-transition-overlay" id="page-transition">
+    <div class="page-transition-loader"></div>
+    <div style="font-family:var(--font-heading);font-weight:700;font-size:1.1rem;" class="gradient-text">Loading Settings…</div>
+  </div>
+
+  <canvas id="aurora-canvas"></canvas>
+  <div class="grid-overlay"></div>
+  <div class="mouse-glow" id="mouse-glow"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="container nav-container">
+      <a href="index.html" class="nav-logo">
+        <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+        <span>Study<span class="gradient-text">Planner.AI</span></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="studio.html" class="nav-link" style="color:#38BDF8;font-weight:700;">AI Studio</a></li>
+        <li><a href="attendance.html" class="nav-link">Attendance</a></li>
+        <li><a href="summarizer.html" class="nav-link" style="color:#C084FC;">AI Summarizer</a></li>
+        <li><a href="planner.html" class="nav-link">Study Planner</a></li>
+        <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+        <li><a href="analytics.html" class="nav-link">Analytics</a></li>
+        <li><a href="profile.html" class="nav-link">Profile</a></li>
+        <li><a href="settings.html" class="nav-link active">Settings</a></li>
+      </ul>
+      <a href="studio.html" class="btn btn-primary">
+        <i data-lucide="cpu"></i> Open AI Studio
+      </a>
+    </div>
+  </nav>
+
+  <!-- SETTINGS PAGE -->
+  <section style="padding-top:8rem;padding-bottom:4rem;">
+    <div class="container">
+
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:2rem;">
+        <div class="section-tag"><i data-lucide="settings"></i> App Configuration</div>
+        <h1 class="section-title">App <span class="gradient-text">Settings</span></h1>
+        <p class="section-subtitle">Personalize your experience, configure AI behavior, and manage your data.</p>
+      </div>
+
+      <div style="display:grid;grid-template-columns:220px 1fr;gap:1.5rem;align-items:start;">
+
+        <!-- Sidebar Nav -->
+        <div class="glass-card" style="padding:0.75rem;position:sticky;top:7rem;">
+          <div id="settings-nav">
+            <button class="settings-nav-btn active" onclick="showSection('notifications',this)">
+              <i data-lucide="bell"></i> Notifications
+            </button>
+            <button class="settings-nav-btn" onclick="showSection('ai',this)">
+              <i data-lucide="cpu"></i> AI Preferences
+            </button>
+            <button class="settings-nav-btn" onclick="showSection('appearance',this)">
+              <i data-lucide="palette"></i> Appearance
+            </button>
+            <button class="settings-nav-btn" onclick="showSection('study',this)">
+              <i data-lucide="book-open"></i> Study Config
+            </button>
+            <button class="settings-nav-btn" onclick="showSection('privacy',this)">
+              <i data-lucide="shield"></i> Privacy & Data
+            </button>
+            <button class="settings-nav-btn" onclick="showSection('about',this)">
+              <i data-lucide="info"></i> About
+            </button>
+          </div>
+        </div>
+
+        <!-- Settings Content -->
+        <div>
+
+          <!-- Notifications -->
+          <div class="glass-card settings-section" id="sec-notifications">
+            <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+              <i data-lucide="bell" style="color:#FBBF24;"></i> Notification Settings
+            </h3>
+            <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem;">Control when and how the AI alerts you about deadlines, attendance, and study goals.</p>
+            <div class="settings-row">
+              <div><div class="settings-label">Exam Deadline Reminders</div><div class="settings-desc">Alert 3 days, 1 day, and 6 hours before exams</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-label">Attendance Low Alerts</div><div class="settings-desc">Notify when subject attendance falls below threshold</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-label">Daily Study Reminder</div><div class="settings-desc">Daily push at your preferred study start time</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-label">Streak Milestone Alerts</div><div class="settings-desc">Celebrate when you hit 7, 14, 30-day streaks</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-label">AI Rescheduling Alerts</div><div class="settings-desc">Notify when AI auto-replans your schedule</div></div>
+              <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Reminder Time</div>
+                <div class="settings-desc">Daily reminder notification time</div>
+              </div>
+              <input type="time" class="form-control" value="07:30" style="width:120px;">
+            </div>
+          </div>
+
+          <!-- AI Preferences -->
+          <div class="glass-card settings-section" id="sec-ai" style="display:none;">
+            <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+              <i data-lucide="cpu" style="color:#38BDF8;"></i> AI Preferences
+            </h3>
+            <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem;">Configure how the AI engine generates your schedules and summaries.</p>
+            <div class="settings-row">
+              <div><div class="settings-label">Auto-Replan on Missed Class</div><div class="settings-desc">AI automatically reschedules when you mark absent</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-label">Smart Break Suggestions</div><div class="settings-desc">AI recommends breaks based on session length</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-label">Exam Priority Weighting</div><div class="settings-desc">Boost study hours for upcoming exams automatically</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">AI Schedule Aggressiveness</div>
+                <div class="settings-desc">How packed should your AI schedule be?</div>
+              </div>
+              <select class="form-control" style="width:160px;">
+                <option>Relaxed</option>
+                <option selected>Balanced</option>
+                <option>Intensive</option>
+                <option>Maximum</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Summary Detail Level</div>
+                <div class="settings-desc">Default depth for AI Note Summarizer</div>
+              </div>
+              <select class="form-control" style="width:160px;">
+                <option>Concise</option>
+                <option selected>Standard</option>
+                <option>Detailed</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Gemini API Key</div>
+                <div class="settings-desc">Optional: Your own Gemini key for enhanced AI</div>
+              </div>
+              <input type="password" class="form-control" placeholder="AIza…" style="width:200px;" id="gemini-key">
+            </div>
+          </div>
+
+          <!-- Appearance -->
+          <div class="glass-card settings-section" id="sec-appearance" style="display:none;">
+            <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+              <i data-lucide="palette" style="color:#C084FC;"></i> Appearance
+            </h3>
+            <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem;">Customize the visual experience of the app.</p>
+            <div class="settings-row">
+              <div><div class="settings-label">Aurora Background Animation</div><div class="settings-desc">The animated color background (may use more GPU)</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-label">Mouse Glow Effect</div><div class="settings-desc">Purple glow that follows your cursor</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-label">Page Transition Animations</div><div class="settings-desc">Loading animation when navigating between pages</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Accent Color</div>
+                <div class="settings-desc">Primary theme color</div>
+              </div>
+              <div style="display:flex;gap:0.5rem;">
+                <div class="color-swatch active" style="background:#7C3AED;" title="Purple (Default)" onclick="setAccent('#7C3AED',this)"></div>
+                <div class="color-swatch" style="background:#2563EB;" title="Blue" onclick="setAccent('#2563EB',this)"></div>
+                <div class="color-swatch" style="background:#06B6D4;" title="Cyan" onclick="setAccent('#06B6D4',this)"></div>
+                <div class="color-swatch" style="background:#10B981;" title="Green" onclick="setAccent('#10B981',this)"></div>
+                <div class="color-swatch" style="background:#EF4444;" title="Red" onclick="setAccent('#EF4444',this)"></div>
+              </div>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Font Size</div>
+                <div class="settings-desc">Base font size for content</div>
+              </div>
+              <select class="form-control" style="width:120px;" onchange="document.documentElement.style.fontSize=this.value">
+                <option value="14px">Small (14px)</option>
+                <option value="16px" selected>Normal (16px)</option>
+                <option value="18px">Large (18px)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Study Config -->
+          <div class="glass-card settings-section" id="sec-study" style="display:none;">
+            <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+              <i data-lucide="book-open" style="color:#34D399;"></i> Study Configuration
+            </h3>
+            <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem;">Configure your Pomodoro timer, weekly goals, and minimum attendance rules.</p>
+            <div class="settings-row">
+              <div><div class="settings-label">Daily Study Target (hours)</div><div class="settings-desc">Your daily hour target for the focus meter</div></div>
+              <input type="number" class="form-control" value="6" min="1" max="16" style="width:80px;">
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-label">Pomodoro Work Duration</div><div class="settings-desc">Minutes of focused work per session</div></div>
+              <select class="form-control" style="width:120px;">
+                <option>20 min</option>
+                <option selected>25 min</option>
+                <option>30 min</option>
+                <option>45 min</option>
+                <option>60 min</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-label">Pomodoro Break Duration</div><div class="settings-desc">Short break between work sessions</div></div>
+              <select class="form-control" style="width:120px;">
+                <option>3 min</option>
+                <option selected>5 min</option>
+                <option>10 min</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-label">Minimum Attendance Threshold</div><div class="settings-desc">Alert when attendance drops below this</div></div>
+              <select class="form-control" style="width:120px;">
+                <option>70%</option>
+                <option>75%</option>
+                <option selected>80%</option>
+                <option>85%</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-label">Sound Effects</div><div class="settings-desc">UI audio feedback (click, success, replan sounds)</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+          </div>
+
+          <!-- Privacy & Data -->
+          <div class="glass-card settings-section" id="sec-privacy" style="display:none;">
+            <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.5rem;">
+              <i data-lucide="shield" style="color:#38BDF8;"></i> Privacy & Data
+            </h3>
+            <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:1rem;">All your data is stored locally in your browser's IndexedDB. Nothing is sent to external servers without your consent.</p>
+            <div class="settings-row">
+              <div><div class="settings-label">Analytics Collection</div><div class="settings-desc">Allow anonymized app usage stats to improve AI</div></div>
+              <label class="toggle-switch"><input type="checkbox"><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div><div class="settings-label">Camera Access (Face Recognition)</div><div class="settings-desc">Required for face-based attendance check-in</div></div>
+              <label class="toggle-switch"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Export All Data</div>
+                <div class="settings-desc">Download all your study data as JSON</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="exportData()">
+                <i data-lucide="download"></i> Export JSON
+              </button>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Clear Study Data</div>
+                <div class="settings-desc">Erase all sessions and schedule data</div>
+              </div>
+              <button class="btn btn-sm" style="background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.35);color:#FCA5A5;" onclick="clearData()">
+                <i data-lucide="trash-2"></i> Clear Data
+              </button>
+            </div>
+            <div class="settings-row">
+              <div>
+                <div class="settings-label">Reset to Defaults</div>
+                <div class="settings-desc">Restore all settings to factory defaults</div>
+              </div>
+              <button class="btn btn-sm" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);color:#FBBF24;" onclick="resetDefaults()">
+                <i data-lucide="rotate-ccw"></i> Reset
+              </button>
+            </div>
+          </div>
+
+          <!-- About -->
+          <div class="glass-card settings-section" id="sec-about" style="display:none;">
+            <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;">
+              <i data-lucide="info" style="color:#C084FC;"></i> About This App
+            </h3>
+            <div style="display:flex;align-items:center;gap:1.5rem;margin-bottom:1.5rem;flex-wrap:wrap;">
+              <div style="width:72px;height:72px;border-radius:18px;background:linear-gradient(135deg,#7C3AED,#06B6D4);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-glow-purple);">
+                <i data-lucide="brain-circuit" style="width:36px;height:36px;color:white;"></i>
+              </div>
+              <div>
+                <h4 style="font-size:1.1rem;">Personal Study Planner Agent</h4>
+                <p style="font-size:0.8rem;color:var(--text-muted);">Version 4.0 · AI Agent Track</p>
+                <p style="font-size:0.8rem;color:#C084FC;margin-top:0.25rem;">Built by Team Pall_AIX · AI Hackathon 2026</p>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;font-size:0.82rem;color:var(--text-secondary);">
+              <div><span style="color:var(--text-muted);">Version:</span> 4.0.0</div>
+              <div><span style="color:var(--text-muted);">Build:</span> 2026.07.30</div>
+              <div><span style="color:var(--text-muted);">Storage:</span> IndexedDB (Local)</div>
+              <div><span style="color:var(--text-muted);">AI Engine:</span> Gemini 2.0 Flash</div>
+              <div><span style="color:var(--text-muted);">OCR:</span> Tesseract.js v4</div>
+              <div><span style="color:var(--text-muted);">Face AI:</span> face-api.js 0.22</div>
+            </div>
+            <hr style="border-color:var(--border-light);margin:1.25rem 0;">
+            <p style="font-size:0.8rem;color:var(--text-muted);line-height:1.7;">
+              This application is an autonomous AI-powered academic management tool that combines smart scheduling, attendance tracking, AI document summarization, gamification, and visual analytics into a single unified platform.
+              Built for the AI Agent Track of Hackathon 2026 by Team Pall_AIX.
+            </p>
+          </div>
+
+          <!-- Save Button -->
+          <div style="display:flex;justify-content:flex-end;gap:0.75rem;margin-top:0.5rem;">
+            <button class="btn btn-secondary btn-sm" onclick="location.reload()">
+              <i data-lucide="x"></i> Cancel
+            </button>
+            <button class="btn btn-primary" onclick="saveSettings()">
+              <i data-lucide="save"></i> Save All Settings
+            </button>
+          </div>
+
+          <!-- Save Toast -->
+          <div id="settings-toast" style="display:none;margin-top:1rem;padding:0.75rem 1rem;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:10px;font-size:0.85rem;color:#34D399;">
+            ✅ Settings saved successfully!
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <a href="index.html" class="nav-logo">
+          <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+          <span>Study<span class="gradient-text">Planner.AI</span></span>
+        </a>
+        <ul class="footer-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="studio.html">AI Studio</a></li>
+          <li><a href="attendance.html">Attendance</a></li>
+          <li><a href="summarizer.html">AI Summarizer</a></li>
+          <li><a href="planner.html">Planner</a></li>
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="analytics.html">Analytics</a></li>
+        </ul>
+      </div>
+      <div class="copyright">&copy; 2026 Personal Study Planner Agent — Team Pall_AIX</div>
+    </div>
+  </footer>
+
+  <script src="db.js"></script>
+  <script src="app.js"></script>
+  <style>
+    .settings-nav-btn {
+      display: flex; align-items: center; gap: 0.6rem;
+      width: 100%; padding: 0.65rem 0.85rem;
+      background: none; border: none; color: var(--text-secondary);
+      font-size: 0.85rem; font-family: var(--font-body); font-weight: 500;
+      border-radius: 10px; cursor: pointer; text-align: left;
+      transition: all 0.2s;
+    }
+    .settings-nav-btn:hover { background: rgba(255,255,255,0.06); color: white; }
+    .settings-nav-btn.active { background: rgba(124,58,237,0.2); color: #C084FC; border: 1px solid rgba(124,58,237,0.3); }
+  </style>
+  <script>
+    const sections = ['notifications','ai','appearance','study','privacy','about'];
+
+    function showSection(id, btn) {
+      sections.forEach(s => {
+        document.getElementById('sec-' + s).style.display = 'none';
+      });
+      document.getElementById('sec-' + id).style.display = 'block';
+      document.querySelectorAll('.settings-nav-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (window.lucide) lucide.createIcons();
+    }
+
+    function setAccent(color, el) {
+      document.querySelectorAll('.color-swatch').forEach(c => c.classList.remove('active'));
+      el.classList.add('active');
+      document.documentElement.style.setProperty('--primary', color);
+    }
+
+    function saveSettings() {
+      const toast = document.getElementById('settings-toast');
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 3000);
+    }
+
+    function exportData() {
+      const data = { profile: { name: 'Rahul Sharma', course: 'B.Tech CS' }, exportDate: new Date().toISOString() };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = 'StudyPlannerData.json'; a.click();
+    }
+
+    function clearData() {
+      if (confirm('Clear all study data? This cannot be undone.')) {
+        localStorage.clear();
+        alert('Data cleared.');
+      }
+    }
+
+    function resetDefaults() {
+      if (confirm('Reset all settings to defaults?')) location.reload();
+    }
+  </script>
+
+  <script src="notifications.js"></script>
+</body>

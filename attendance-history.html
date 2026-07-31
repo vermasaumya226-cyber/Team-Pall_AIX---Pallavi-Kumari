@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Attendance History | Personal Study Planner Agent — Pall_AIX</title>
+  <meta name="description" content="AI Attendance History Records & Analytics with student search, date filters, department filters, and CSV/PDF export.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- PAGE TRANSITION OVERLAY -->
+  <div class="page-transition-overlay" id="page-transition">
+    <div class="page-transition-loader"></div>
+    <div style="font-family:var(--font-heading);font-weight:700;font-size:1.1rem;" class="gradient-text" id="page-trans-title">Loading Attendance History…</div>
+  </div>
+
+  <canvas id="aurora-canvas"></canvas>
+  <div class="grid-overlay"></div>
+  <div class="mouse-glow" id="mouse-glow"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="container nav-container">
+      <a href="index.html" class="nav-logo">
+        <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+        <span>Study<span class="gradient-text">Planner.AI</span></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="studio.html" class="nav-link">AI Studio</a></li>
+        <li><a href="attendance.html" class="nav-link">Attendance</a></li>
+        <li><a href="register.html" class="nav-link" style="color:#10B981;">Register Student</a></li>
+        <li><a href="attendance-history.html" class="nav-link active" style="color:#38BDF8;font-weight:700;">History</a></li>
+        <li><a href="summarizer.html" class="nav-link">AI Summarizer</a></li>
+        <li><a href="planner.html" class="nav-link">Study Planner</a></li>
+        <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+        <li><a href="analytics.html" class="nav-link">Analytics</a></li>
+      </ul>
+      <a href="attendance.html" class="btn btn-primary btn-sm">
+        <i data-lucide="scan-face"></i> Live Attendance
+      </a>
+    </div>
+  </nav>
+
+  <!-- ATTENDANCE HISTORY SECTION -->
+  <section style="padding-top:7.5rem;padding-bottom:4rem;">
+    <div class="container">
+
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:2.5rem;">
+        <div class="section-tag"><i data-lucide="history"></i> Biometric Audit Logs</div>
+        <h1 class="section-title">Attendance <span class="gradient-text">History & Analytics</span></h1>
+        <p class="section-subtitle">Comprehensive face recognition verification logs. Search student records, filter by department or date, and export reports in CSV or PDF formats.</p>
+      </div>
+
+      <!-- Quick Navigation Tabs -->
+      <div style="display:flex;justify-content:center;gap:1rem;margin-bottom:2.5rem;">
+        <a href="attendance.html" class="btn btn-secondary btn-sm">
+          <i data-lucide="camera"></i> Live Face Check-In
+        </a>
+        <a href="register.html" class="btn btn-secondary btn-sm">
+          <i data-lucide="user-check"></i> Student Registration
+        </a>
+        <a href="attendance-history.html" class="btn btn-primary btn-sm">
+          <i data-lucide="history"></i> Attendance History
+        </a>
+      </div>
+
+      <!-- Attendance Statistics Header Cards -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:1.25rem;margin-bottom:2.5rem;">
+        <div class="glass-card" style="text-align:center;padding:1.5rem;">
+          <div class="gradient-text" style="font-size:2.4rem;font-weight:800;" id="stat-present-days">4 Days</div>
+          <p style="color:var(--text-secondary);font-size:0.82rem;margin-top:0.2rem;">Present Days</p>
+          <div style="font-size:0.72rem;color:#34D399;margin-top:0.4rem;">✅ Active Track</div>
+        </div>
+        <div class="glass-card" style="text-align:center;padding:1.5rem;">
+          <div class="gradient-text-alt" style="font-size:2.4rem;font-weight:800;" id="stat-pct">100%</div>
+          <p style="color:var(--text-secondary);font-size:0.82rem;margin-top:0.2rem;">Attendance Percentage</p>
+          <div style="font-size:0.72rem;color:#38BDF8;margin-top:0.4rem;">🎯 Target Exceeded (>75%)</div>
+        </div>
+        <div class="glass-card" style="text-align:center;padding:1.5rem;">
+          <div style="font-size:2.4rem;font-weight:800;color:#C084FC;" id="stat-total-logs">4</div>
+          <p style="color:var(--text-secondary);font-size:0.82rem;margin-top:0.2rem;">Total Check-Ins</p>
+          <div style="font-size:0.72rem;color:#94A3B8;margin-top:0.4rem;">AI Verified Scans</div>
+        </div>
+        <div class="glass-card" style="text-align:center;padding:1.5rem;">
+          <div style="font-size:2.4rem;font-weight:800;color:#FBBF24;" id="stat-unique-students">3</div>
+          <p style="color:var(--text-secondary);font-size:0.82rem;margin-top:0.2rem;">Unique Students</p>
+          <div style="font-size:0.72rem;color:#FBBF24;margin-top:0.4rem;">Registered Active</div>
+        </div>
+      </div>
+
+      <!-- Filters & Actions Bar -->
+      <div class="glass-card" style="margin-bottom:2rem;padding:1.25rem 1.75rem;">
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:1rem;align-items:center;">
+          
+          <!-- Search Input -->
+          <div>
+            <label style="display:block;font-size:0.75rem;color:var(--text-muted);margin-bottom:0.3rem;">Search Student Name or ID</label>
+            <div style="position:relative;">
+              <input type="text" id="hist-search" class="form-control" placeholder="Search by name, ID or subject…" oninput="applyFilters()" style="padding-left:2.2rem;" />
+              <i data-lucide="search" style="position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);width:16px;color:var(--text-muted);"></i>
+            </div>
+          </div>
+
+          <!-- Date Filter -->
+          <div>
+            <label style="display:block;font-size:0.75rem;color:var(--text-muted);margin-bottom:0.3rem;">Filter by Date</label>
+            <input type="date" id="hist-date" class="form-control" onchange="applyFilters()" />
+          </div>
+
+          <!-- Department Filter -->
+          <div>
+            <label style="display:block;font-size:0.75rem;color:var(--text-muted);margin-bottom:0.3rem;">Filter by Department</label>
+            <select id="hist-dept" class="form-control" onchange="applyFilters()">
+              <option value="All">All Departments</option>
+              <option value="Computer Science">Computer Science</option>
+              <option value="Electrical Engineering">Electrical Engineering</option>
+              <option value="Physics">Physics</option>
+              <option value="Mathematics">Mathematics</option>
+            </select>
+          </div>
+
+          <!-- Export Buttons -->
+          <div style="display:flex;gap:0.5rem;align-self:end;">
+            <button class="btn btn-secondary btn-sm" onclick="frExportAttendanceCSV()" title="Export CSV Data">
+              <i data-lucide="download"></i> Export CSV
+            </button>
+            <button class="btn btn-primary btn-sm" onclick="frExportAttendancePDF()" title="Export PDF Report">
+              <i data-lucide="file-text"></i> Export PDF
+            </button>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Attendance History Table Card -->
+      <div class="glass-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.25rem;">
+          <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;">
+            <i data-lucide="list-checks" style="color:#38BDF8;"></i> Verified Attendance Log Records
+          </h3>
+          <button class="btn btn-secondary btn-sm" onclick="resetFilters()">
+            <i data-lucide="rotate-ccw"></i> Reset Filters
+          </button>
+        </div>
+
+        <div style="overflow-x:auto;">
+          <table style="width:100%;border-collapse:collapse;font-size:0.88rem;text-align:left;">
+            <thead>
+              <tr style="border-bottom:1px solid var(--border-light);color:var(--text-secondary);font-size:0.8rem;text-transform:uppercase;letter-spacing:0.05em;">
+                <th style="padding:0.75rem 1rem;">Date & Time</th>
+                <th style="padding:0.75rem 1rem;">Student ID</th>
+                <th style="padding:0.75rem 1rem;">Student Name</th>
+                <th style="padding:0.75rem 1rem;">Department</th>
+                <th style="padding:0.75rem 1rem;">Subject</th>
+                <th style="padding:0.75rem 1rem;">Status</th>
+                <th style="padding:0.75rem 1rem;">Confidence</th>
+              </tr>
+            </thead>
+            <tbody id="history-table-body">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <a href="index.html" class="nav-logo">
+          <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+          <span>Study<span class="gradient-text">Planner.AI</span></span>
+        </a>
+        <ul class="footer-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="attendance.html">Attendance</a></li>
+          <li><a href="register.html">Register Student</a></li>
+          <li><a href="attendance-history.html">History</a></li>
+        </ul>
+      </div>
+      <div class="copyright">&copy; 2026 Personal Study Planner Agent — Team Pall_AIX</div>
+    </div>
+  </footer>
+
+  <script src="db.js"></script>
+  <script src="face-recognition.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      applyFilters();
+    });
+
+    function applyFilters() {
+      const search = document.getElementById('hist-search')?.value || '';
+      const date = document.getElementById('hist-date')?.value || '';
+      const dept = document.getElementById('hist-dept')?.value || 'All';
+
+      const data = AppDB.getAttendanceFiltered({ searchQuery: search, date: date, department: dept });
+      renderHistoryTable(data.records);
+      renderStats(data);
+    }
+
+    function resetFilters() {
+      if (document.getElementById('hist-search')) document.getElementById('hist-search').value = '';
+      if (document.getElementById('hist-date')) document.getElementById('hist-date').value = '';
+      if (document.getElementById('hist-dept')) document.getElementById('hist-dept').value = 'All';
+      applyFilters();
+    }
+
+    function renderStats(data) {
+      const uniqueDays = new Set((data.records || []).map(r => r.date)).size;
+      const elDays = document.getElementById('stat-present-days');
+      const elPct = document.getElementById('stat-pct');
+      const elTotal = document.getElementById('stat-total-logs');
+      const elUnique = document.getElementById('stat-unique-students');
+
+      if (elDays) elDays.textContent = `${uniqueDays} Day${uniqueDays === 1 ? '' : 's'}`;
+      if (elPct) elPct.textContent = `${data.attendancePercentage}%`;
+      if (elTotal) elTotal.textContent = data.totalRecords;
+      if (elUnique) elUnique.textContent = data.uniqueStudents;
+    }
+
+    function renderHistoryTable(records) {
+      const tbody = document.getElementById('history-table-body');
+      if (!tbody) return;
+
+      if (!records || records.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" style="text-align:center;padding:2.5rem;color:var(--text-muted);">
+              No attendance records available.
+            </td>
+          </tr>`;
+        return;
+      }
+
+      tbody.innerHTML = records.map(r => {
+        const isVerified = r.status === 'Verified';
+        const statusColor = isVerified ? '#34D399' : '#EF4444';
+        const statusBg = isVerified ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)';
+        const statusBorder = isVerified ? 'rgba(16,185,129,0.3)' : 'rgba(239,68,68,0.3)';
+
+        return `
+          <tr style="border-bottom:1px solid rgba(255,255,255,0.05);transition:background 0.2s;" onmouseenter="this.style.background='rgba(255,255,255,0.02)'" onmouseleave="this.style.background='transparent'">
+            <td style="padding:0.85rem 1rem;color:var(--text-secondary);font-size:0.82rem;">
+              📅 ${r.date} <span style="color:var(--text-muted);">(${r.time || '—'})</span>
+            </td>
+            <td style="padding:0.85rem 1rem;font-family:var(--font-heading);font-weight:700;color:#38BDF8;">
+              ${r.studentId || '—'}
+            </td>
+            <td style="padding:0.85rem 1rem;font-weight:600;color:var(--text-primary);">
+              ${r.studentName || r.name || '—'}
+            </td>
+            <td style="padding:0.85rem 1rem;color:var(--text-secondary);">
+              ${r.department || '—'}
+            </td>
+            <td style="padding:0.85rem 1rem;color:#C084FC;font-weight:500;">
+              ${r.subject || 'General'}
+            </td>
+            <td style="padding:0.85rem 1rem;">
+              <span style="display:inline-flex;align-items:center;gap:0.3rem;padding:3px 10px;border-radius:12px;font-size:0.75rem;font-weight:700;background:${statusBg};color:${statusColor};border:1px solid ${statusBorder};">
+                ${isVerified ? 'Verified ✓' : 'Rejected ❌'}
+              </span>
+            </td>
+            <td style="padding:0.85rem 1rem;font-weight:700;color:${statusColor};">
+              ${r.confidence || 0}%
+            </td>
+          </tr>`;
+      }).join('');
+    }
+  </script>
+
+  <script src="notifications.js"></script>
+</body>

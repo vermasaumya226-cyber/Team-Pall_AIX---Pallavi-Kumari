@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Studio | Personal Study Planner Agent — Pall_AIX</title>
+  <meta name="description" content="Configure inputs, upload documents, scan timetables, and generate AI study schedules.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- PAGE TRANSITION OVERLAY -->
+  <div class="page-transition-overlay" id="page-transition">
+    <div class="page-transition-loader"></div>
+    <div style="font-family:var(--font-heading);font-weight:700;font-size:1.1rem;" class="gradient-text" id="page-trans-title">Loading AI Studio…</div>
+  </div>
+
+  <canvas id="aurora-canvas"></canvas>
+  <div class="grid-overlay"></div>
+  <div class="mouse-glow" id="mouse-glow"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="container nav-container">
+      <a href="index.html" class="nav-logo">
+        <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+        <span>Study<span class="gradient-text">Planner.AI</span></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="studio.html" class="nav-link active" style="color:#38BDF8;font-weight:700;">AI Studio</a></li>
+        <li><a href="attendance.html" class="nav-link">Attendance</a></li>
+        <li><a href="register.html" class="nav-link" style="color:#10B981;">Register Student</a></li>
+        <li><a href="attendance-history.html" class="nav-link" style="color:#38BDF8;">History</a></li>
+        <li><a href="summarizer.html" class="nav-link" style="color:#C084FC;">AI Summarizer</a></li>
+        <li><a href="planner.html" class="nav-link">Study Planner</a></li>
+        <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+        <li><a href="analytics.html" class="nav-link">Analytics</a></li>
+      </ul>
+      <a href="studio.html" class="btn btn-primary">
+        <i data-lucide="cpu"></i> Open AI Studio
+      </a>
+    </div>
+  </nav>
+
+  <!-- AI STUDIO SECTION -->
+  <section class="studio-section" id="studio" style="padding-top:8rem;">
+    <div class="container">
+      <div style="text-align:center;margin-bottom:2.5rem;">
+        <div class="section-tag"><i data-lucide="sliders"></i> Interactive AI Planning Studio</div>
+        <h2 class="section-title">Configure Inputs & <span class="gradient-text">Generate AI Schedule</span></h2>
+        <p class="section-subtitle">Upload PDFs, scan your timetable image to detect free slots, add subjects, and get a live AI-generated study plan with editable timings.</p>
+      </div>
+
+      <div class="studio-grid">
+
+        <!-- ═══ LEFT PANEL: INPUTS ═══ -->
+        <div class="studio-panel">
+
+          <!-- STEP 1: PDF / Docs Upload -->
+          <div class="studio-title-bar">
+            <h3 style="font-size:1.1rem;display:flex;align-items:center;gap:0.5rem;">
+              <i data-lucide="file-text" style="color:#C084FC;"></i> Step 1 · Upload Documents
+            </h3>
+            <span style="font-size:0.72rem;color:#34D399;background:rgba(16,185,129,0.15);padding:0.2rem 0.5rem;border-radius:6px;">Click file = open</span>
+          </div>
+
+          <div class="upload-zone" id="drop-zone" onclick="triggerFileInput()">
+            <input type="file" id="file-input" multiple accept=".pdf,.png,.jpg,.jpeg,.txt,.doc,.docx" style="display:none;" onchange="handleFilesSelected(event)">
+            <i data-lucide="upload-cloud" style="width:32px;height:32px;color:#38BDF8;margin-bottom:0.4rem;"></i>
+            <h4 style="font-size:0.9rem;">Drag & Drop PDF / Syllabus</h4>
+            <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">PDF, Image, TXT — click any file below to view it</p>
+            <button class="btn btn-secondary btn-sm" style="margin-top:0.6rem;" onclick="event.stopPropagation();triggerFileInput()">Browse Files</button>
+          </div>
+
+          <div class="uploaded-files-list" id="files-list"></div>
+
+          <!-- STEP 2: Timetable Image Scanner -->
+          <div class="studio-title-bar" style="margin-top:1.25rem;">
+            <h3 style="font-size:1.1rem;display:flex;align-items:center;gap:0.5rem;">
+              <i data-lucide="scan" style="color:#38BDF8;"></i> Step 2 · Scan Class Timetable
+            </h3>
+          </div>
+
+          <div class="schedule-scanner-box" id="schedule-scanner-zone">
+            <input type="file" id="schedule-img-input" accept="image/*" style="display:none;" onchange="handleScheduleImageUploaded(event)">
+            <div class="scanner-laser-line" id="laser-line"></div>
+
+            <div id="scanner-placeholder">
+              <i data-lucide="image" style="width:32px;height:32px;color:#38BDF8;margin-bottom:0.4rem;"></i>
+              <h4 style="font-size:0.88rem;">Drag or Drop Class Timetable Image</h4>
+              <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.2rem;">AI scans lecture slots & auto-detects your free self-study windows</p>
+              <button class="btn btn-secondary btn-sm" style="margin-top:0.6rem;" onclick="triggerScheduleImageInput()">
+                <i data-lucide="camera"></i> Upload Timetable Image
+              </button>
+            </div>
+
+            <div id="timetable-img-container" style="display:none;margin-top:0.75rem;">
+              <img id="timetable-img-preview" class="timetable-img-preview" src="" alt="Timetable" onclick="openTimetableFullscreen()" title="Click to view full size">
+              <p style="font-size:0.72rem;color:#38BDF8;margin-top:0.4rem;cursor:pointer;" onclick="openTimetableFullscreen()">
+                <i data-lucide="zoom-in" style="width:12px;display:inline;"></i> Click image to view full size
+              </p>
+            </div>
+
+            <div id="ocr-result-container" style="display:none;margin-top:0.5rem;"></div>
+          </div>
+
+          <!-- STEP 3: Subjects -->
+          <div class="studio-title-bar" style="margin-top:1.25rem;">
+            <h3 style="font-size:1.1rem;display:flex;align-items:center;gap:0.5rem;">
+              <i data-lucide="book-open" style="color:#FBBF24;"></i> Step 3 · Add Subjects
+            </h3>
+          </div>
+
+          <div class="subject-form">
+            <input type="text" id="subj-name-input" class="form-control" placeholder="e.g. Calculus III, Data Structures…">
+            <div class="form-row">
+              <select id="subj-priority-input" class="form-control">
+                <option value="Critical">🔴 Critical Priority</option>
+                <option value="High" selected>🟡 High Priority</option>
+                <option value="Normal">🟢 Normal Priority</option>
+              </select>
+              <input type="number" id="subj-attend-input" class="form-control" placeholder="Attendance %" min="0" max="100" value="85">
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="handleAddSubjectManual()">
+              <i data-lucide="plus-circle"></i> Add Subject to AI Engine
+            </button>
+          </div>
+
+          <div class="subjects-chip-grid" id="subjects-chip-container"></div>
+
+          <!-- STEP 4: Free Time Slots -->
+          <div class="studio-title-bar">
+            <h3 style="font-size:1.1rem;display:flex;align-items:center;gap:0.5rem;">
+              <i data-lucide="clock" style="color:#34D399;"></i> Step 4 · Select Self-Study Slots
+            </h3>
+          </div>
+
+          <div class="free-slots-box">
+            <div style="font-size:0.75rem;color:var(--text-muted);">Pick available hours for study sessions:</div>
+            <div class="slot-pills">
+              <div class="slot-pill selected" onclick="toggleSlotPill(this,'08:00 - 10:00')">🌅 08:00 - 10:00 AM</div>
+              <div class="slot-pill selected" onclick="toggleSlotPill(this,'10:00 - 12:00')">☀️ 10:00 - 12:00 PM</div>
+              <div class="slot-pill" onclick="toggleSlotPill(this,'14:00 - 16:00')">⛅ 02:00 - 04:00 PM</div>
+              <div class="slot-pill selected" onclick="toggleSlotPill(this,'16:00 - 18:00')">🌆 04:00 - 06:00 PM</div>
+              <div class="slot-pill selected" onclick="toggleSlotPill(this,'19:00 - 21:00')">🌙 07:00 - 09:00 PM</div>
+            </div>
+          </div>
+
+          <!-- STEP 5: Target Days -->
+          <div class="studio-title-bar">
+            <h3 style="font-size:1.1rem;display:flex;align-items:center;gap:0.5rem;">
+              <i data-lucide="calendar" style="color:#C084FC;"></i> Step 5 · Select Study Days
+            </h3>
+          </div>
+
+          <div class="day-picker-box">
+            <div class="day-picker-grid">
+              <div class="day-btn active" onclick="toggleDayPicker(this,'Mon')">Mon</div>
+              <div class="day-btn active" onclick="toggleDayPicker(this,'Tue')">Tue</div>
+              <div class="day-btn active" onclick="toggleDayPicker(this,'Wed')">Wed</div>
+              <div class="day-btn active" onclick="toggleDayPicker(this,'Thu')">Thu</div>
+              <div class="day-btn active" onclick="toggleDayPicker(this,'Fri')">Fri</div>
+              <div class="day-btn active" onclick="toggleDayPicker(this,'Sat')">Sat</div>
+              <div class="day-btn active" onclick="toggleDayPicker(this,'Sun')">Sun</div>
+            </div>
+          </div>
+
+          <!-- GENERATE BUTTON -->
+          <button class="btn btn-primary" style="width:100%;margin-top:1rem;" onclick="generateCustomAISchedule()">
+            <i data-lucide="sparkles"></i> Generate AI Study Schedule
+          </button>
+        </div>
+
+        <!-- ═══ RIGHT PANEL: GENERATED PLAN ═══ -->
+        <div class="studio-panel">
+          <div class="studio-title-bar">
+            <h3 style="font-size:1.1rem;display:flex;align-items:center;gap:0.5rem;">
+              <i data-lucide="check-square" style="color:#34D399;"></i> Generated AI Schedule
+            </h3>
+            <div style="display:flex;gap:0.4rem;">
+              <button class="btn btn-secondary btn-sm" onclick="triggerRescheduleSimulation()">
+                <i data-lucide="refresh-cw"></i> Auto-Replan
+              </button>
+              <button class="btn btn-secondary btn-sm" onclick="exportSchedule()">
+                <i data-lucide="download"></i> Export
+              </button>
+            </div>
+          </div>
+
+          <div class="day-tab-row" id="studio-day-tabs"></div>
+          <div id="studio-schedule-view" style="min-height:350px;"></div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <a href="index.html" class="nav-logo">
+          <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+          <span>Study<span class="gradient-text">Planner.AI</span></span>
+        </a>
+        <ul class="footer-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="studio.html">AI Studio</a></li>
+          <li><a href="attendance.html">Attendance</a></li>
+          <li><a href="summarizer.html">AI Summarizer</a></li>
+          <li><a href="planner.html">Planner</a></li>
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="analytics.html">Analytics</a></li>
+        </ul>
+      </div>
+      <div class="copyright">&copy; 2026 Personal Study Planner Agent — Team Pall_AIX</div>
+    </div>
+  </footer>
+
+  <script src="db.js?v=4.0"></script>
+  <script src="ocr-timetable.js?v=4.0"></script>
+  <script src="study-planner.js?v=4.0"></script>
+  <script src="chat-assistant.js?v=4.0"></script>
+  <script src="analytics-dashboard.js?v=4.0"></script>
+  <script src="notes-summarizer.js?v=4.0"></script>
+  <script src="face-recognition.js?v=4.0"></script>
+  <script src="app.js?v=4.0"></script>
+  <script src="notifications.js?v=4.0"></script>
+</body>

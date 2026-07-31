@@ -1,0 +1,1057 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study Planner | AI Timetable | Pall_AIX</title>
+  <meta name="description" content="Smart timetable OCR scanner. Upload your college timetable to auto-detect classes, identify free slots, and generate a conflict-free AI study schedule.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <link rel="stylesheet" href="styles.css?v=4.2">
+
+  <style>
+    /* ═══════════════════════════════════════════════════
+       TIMETABLE GRID — VIT-style layout
+       Colored = occupied class  |  Plain = free/study
+       ═══════════════════════════════════════════════════ */
+
+    .tt-wrap {
+      overflow-x: auto;
+      border-radius: 12px;
+    }
+
+    .tt-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 3px;
+      min-width: 780px;
+    }
+
+    /* Header row (time labels) */
+    .tt-table thead th {
+      background: rgba(255,255,255,0.05);
+      color: #94A3B8;
+      font-size: 0.68rem;
+      font-weight: 700;
+      text-align: center;
+      padding: 6px 4px;
+      border-radius: 6px;
+      white-space: nowrap;
+      letter-spacing: 0.01em;
+    }
+    .tt-table thead th.tt-hdr-day {
+      background: transparent;
+      min-width: 54px;
+    }
+    .tt-table thead th.tt-hdr-lunch {
+      color: #FBBF24;
+      background: rgba(251,191,36,0.07);
+      min-width: 56px;
+    }
+
+    /* Day label cells */
+    .tt-day-cell {
+      font-weight: 700;
+      font-size: 0.78rem;
+      color: #F1F5F9;
+      text-align: center;
+      padding: 4px 6px;
+      border-radius: 6px;
+      background: rgba(255,255,255,0.03);
+      white-space: nowrap;
+    }
+
+    /* All time slot cells */
+    .tt-cell {
+      height: 56px;
+      min-width: 90px;
+      max-width: 130px;
+      border-radius: 8px;
+      padding: 5px 6px;
+      vertical-align: middle;
+      text-align: center;
+      font-size: 0.69rem;
+      font-weight: 500;
+      transition: all 0.15s;
+      position: relative;
+    }
+
+    /* ── OCCUPIED / CLASS cell ── colored highlight */
+    .tt-cell.class-slot {
+      background: rgba(124,58,237,0.22);
+      border: 1.5px solid rgba(192,132,252,0.45);
+      color: #C084FC;
+      font-weight: 700;
+      cursor: default;
+    }
+    .tt-cell.class-slot .tt-course {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: #DDD6FE;
+      line-height: 1.3;
+      word-break: break-word;
+    }
+    .tt-cell.class-slot .tt-room {
+      font-size: 0.6rem;
+      color: rgba(192,132,252,0.7);
+      margin-top: 2px;
+    }
+    .tt-cell.class-slot::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 8px 8px 0 0;
+      background: linear-gradient(90deg, #7C3AED, #C084FC);
+    }
+
+    /* ── FREE / STUDY cell ── no color, plain */
+    .tt-cell.study-slot {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.07);
+      color: #64748B;
+      cursor: pointer;
+    }
+    .tt-cell.study-slot:hover {
+      background: rgba(255,255,255,0.03);
+      border-color: rgba(56,189,248,0.2);
+      color: #94A3B8;
+    }
+    .tt-cell.study-slot .tt-study-subj {
+      font-size: 0.67rem;
+      font-weight: 600;
+      color: #475569;
+      line-height: 1.3;
+    }
+    .tt-cell.study-slot .tt-study-type {
+      font-size: 0.6rem;
+      color: #334155;
+      margin-top: 2px;
+    }
+    .tt-cell.study-slot:hover .tt-study-subj { color: #64748B; }
+
+    /* ── LUNCH cell */
+    .tt-cell.lunch-slot {
+      background: rgba(251,191,36,0.07);
+      border: 1px solid rgba(251,191,36,0.18);
+      color: #FBBF24;
+      font-weight: 700;
+      font-size: 0.7rem;
+      cursor: default;
+      min-width: 56px;
+    }
+
+    /* ── EMPTY cell (no class, no assigned study) */
+    .tt-cell.empty-slot {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.04);
+      color: transparent;
+    }
+
+    /* ── LEGEND ── */
+    .tt-legend {
+      display: flex;
+      gap: 1.25rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+      align-items: center;
+    }
+    .tt-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+    }
+    .tt-legend-box {
+      width: 14px; height: 14px;
+      border-radius: 4px;
+      flex-shrink: 0;
+    }
+
+    /* ── Day Tab Buttons ── */
+    .day-tab-btn { min-width: 54px; transition: all 0.2s; }
+    .day-tab-btn.active {
+      background: rgba(124,58,237,0.35) !important;
+      border-color: rgba(124,58,237,0.6) !important;
+      color: #C084FC !important;
+      font-weight: 700;
+    }
+
+    /* ── Detail Row Cards (below grid) ── */
+    .detail-row {
+      display: flex;
+      align-items: center;
+      gap: 0;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 5px;
+      min-height: 52px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .detail-time {
+      min-width: 96px;
+      padding: 0.5rem 0.55rem;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #38BDF8;
+      background: rgba(56,189,248,0.05);
+      border-right: 1px solid rgba(255,255,255,0.05);
+      text-align: center;
+      flex-shrink: 0;
+      font-family: var(--font-heading, 'Space Grotesk', sans-serif);
+    }
+    .detail-body {
+      flex: 1;
+      padding: 0.5rem 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+    }
+    .detail-row.class-row { background: rgba(124,58,237,0.11); border-color: rgba(124,58,237,0.3); }
+    .detail-row.class-row .detail-time { color: #C084FC; background: rgba(124,58,237,0.15); border-right-color: rgba(124,58,237,0.25); }
+    .detail-row.study-row { background: transparent; }
+    .detail-row.study-row:hover { background: rgba(255,255,255,0.02); }
+    .detail-row.done-row { opacity: 0.45; }
+
+    /* Pomodoro */
+    .pomo-display {
+      font-size: 3rem; font-weight: 800;
+      font-family: var(--font-heading, 'Space Grotesk', sans-serif);
+      color: #34D399; letter-spacing: 0.05em; line-height: 1;
+    }
+    .pomo-mode { font-size: 0.73rem; font-weight: 600; color: #94A3B8; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 3px; }
+    .pomo-btn-start { min-width:96px; height:38px; border-radius:8px; font-weight:700; font-size:0.88rem; cursor:pointer; border:none; background:linear-gradient(135deg,#10B981,#34D399); color:#030712; transition:all 0.18s; }
+    .pomo-btn-start:hover { opacity:0.88; transform:translateY(-1px); }
+    .pomo-btn-pause { min-width:96px; height:38px; border-radius:8px; font-weight:700; font-size:0.88rem; cursor:pointer; background:rgba(251,191,36,0.15); color:#FBBF24; border:1px solid rgba(251,191,36,0.35); transition:all 0.18s; }
+    .pomo-btn-pause:hover { background:rgba(251,191,36,0.25); }
+    .pomo-btn-reset { width:38px; height:38px; border-radius:8px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#94A3B8; cursor:pointer; font-size:0.95rem; transition:all 0.15s; }
+    .pomo-btn-reset:hover { background:rgba(255,255,255,0.12); color:#F1F5F9; }
+    .pomo-dot { width:10px; height:10px; border-radius:50%; border:2px solid rgba(52,211,153,0.35); transition:all 0.3s; }
+    .pomo-dot.filled { background:#34D399; border-color:#34D399; }
+    .dur-btn { padding:3px 10px; border-radius:8px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); color:#94A3B8; cursor:pointer; font-size:0.73rem; transition:all 0.15s; }
+    .dur-btn.active { border-color:rgba(52,211,153,0.5); color:#34D399; }
+    .dur-btn:hover { background:rgba(255,255,255,0.09); }
+
+    .action-btn { padding:3px 8px; border-radius:6px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1); color:#64748B; cursor:pointer; font-size:0.72rem; transition:all 0.14s; }
+    .action-btn:hover { background:rgba(255,255,255,0.12); color:#F1F5F9; }
+
+    /* free-slot badge */
+    .fs-badge { font-size:0.71rem; padding:3px 9px; background:transparent; color:#64748B; border:1px solid rgba(255,255,255,0.1); border-radius:10px; white-space:nowrap; }
+    /* class chip badge */
+    .cls-chip { font-size:0.71rem; padding:3px 9px; background:rgba(124,58,237,0.15); color:#C084FC; border:1px solid rgba(124,58,237,0.35); border-radius:10px; white-space:nowrap; }
+  </style>
+</head>
+<body>
+
+  <div class="page-transition-overlay" id="page-transition">
+    <div class="page-transition-loader"></div>
+    <div style="font-family:var(--font-heading);font-weight:700;font-size:1.1rem;" class="gradient-text">Loading Study Planner…</div>
+  </div>
+
+  <canvas id="aurora-canvas"></canvas>
+  <div class="grid-overlay"></div>
+  <div class="mouse-glow" id="mouse-glow"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="container nav-container">
+      <a href="index.html" class="nav-logo">
+        <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+        <span>Study<span class="gradient-text">Planner.AI</span></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html" class="nav-link">Home</a></li>
+        <li><a href="studio.html" class="nav-link">AI Studio</a></li>
+        <li><a href="attendance.html" class="nav-link">Attendance</a></li>
+        <li><a href="register.html" class="nav-link" style="color:#10B981;">Register Student</a></li>
+        <li><a href="attendance-history.html" class="nav-link" style="color:#38BDF8;">History</a></li>
+        <li><a href="summarizer.html" class="nav-link">AI Summarizer</a></li>
+        <li><a href="planner.html" class="nav-link active" style="color:#C084FC;font-weight:700;">Study Planner</a></li>
+        <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+        <li><a href="analytics.html" class="nav-link">Analytics</a></li>
+      </ul>
+      <a href="studio.html" class="btn btn-primary btn-sm"><i data-lucide="cpu"></i> AI Studio</a>
+    </div>
+  </nav>
+
+  <section style="padding-top:7.5rem;padding-bottom:4rem;">
+    <div class="container">
+
+      <!-- Header -->
+      <div style="text-align:center;margin-bottom:2rem;">
+        <div class="section-tag"><i data-lucide="calendar"></i> Smart Timetable OCR Engine</div>
+        <h1 class="section-title">Weekly Timetable &amp; <span class="gradient-text">AI Self-Study Planner</span></h1>
+        <p class="section-subtitle">Upload your college timetable. OCR extracts class slots, identifies free time, and generates a conflict-free AI study schedule. <strong style="color:#C084FC;">Colored = class occupied · Plain = free self-study</strong></p>
+        <div id="planner-student-badge" style="font-size:0.85rem;color:#38BDF8;font-weight:600;margin-top:0.5rem;"></div>
+      </div>
+
+      <!-- Row 1: OCR Upload + AI Re-Scheduler -->
+      <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:1.5rem;margin-bottom:1.75rem;">
+
+        <!-- OCR Scanner -->
+        <div class="glass-card">
+          <h3 style="font-size:1.05rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;color:#38BDF8;">
+            <i data-lucide="scan-line"></i> Smart Timetable OCR Scanner
+          </h3>
+
+          <label class="upload-zone" for="ocr-file-input"
+            id="ocr-drop-zone"
+            style="min-height:110px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+                   border:2px dashed rgba(56,189,248,0.35);border-radius:12px;padding:1rem;background:rgba(56,189,248,0.04);cursor:pointer;">
+            <input type="file" id="ocr-file-input" accept="image/*,.pdf,application/pdf"
+              style="display:none;" onchange="handleOCRUpload(event)">
+            <i data-lucide="image" style="width:28px;height:28px;color:#38BDF8;margin-bottom:0.35rem;"></i>
+            <h4 style="font-size:0.87rem;">Upload Timetable Image or PDF</h4>
+            <p style="font-size:0.72rem;color:var(--text-muted);">Tesseract OCR · supports JPG, PNG, WEBP, PDF</p>
+          </label>
+
+          <div id="ocr-status-box" style="display:none;margin-top:0.75rem;padding:0.65rem 0.85rem;background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.25);border-radius:10px;">
+            <div style="display:flex;align-items:center;gap:0.5rem;">
+              <div class="page-transition-loader" style="width:15px;height:15px;border-width:2px;flex-shrink:0;"></div>
+              <span id="ocr-msg" style="color:#38BDF8;font-weight:600;font-size:0.82rem;">Scanning…</span>
+            </div>
+            <div style="height:4px;background:rgba(255,255,255,0.06);border-radius:2px;margin-top:0.45rem;overflow:hidden;">
+              <div id="ocr-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#38BDF8,#10B981);border-radius:2px;transition:width 0.3s;"></div>
+            </div>
+          </div>
+
+          <div id="ocr-img-preview" style="display:none;margin-top:0.75rem;border-radius:10px;overflow:hidden;border:1px solid rgba(56,189,248,0.25);">
+            <img id="ocr-img-tag" src="" alt="Uploaded timetable" style="width:100%;max-height:170px;object-fit:contain;background:#030712;" />
+            <div id="pdf-name-tag" style="display:none;padding:0.5rem 0.85rem;background:rgba(56,189,248,0.1);color:#38BDF8;font-size:0.81rem;font-weight:600;"></div>
+          </div>
+
+          <!-- Chips -->
+          <div style="margin-top:0.85rem;">
+            <div style="font-size:0.77rem;font-weight:700;color:var(--text-secondary);margin-bottom:0.4rem;">
+              🟣 Detected Class Slots (highlighted):
+            </div>
+            <div id="lecture-chips" style="display:flex;gap:0.35rem;flex-wrap:wrap;">
+              <span style="font-size:0.74rem;color:var(--text-muted);">Upload a timetable to detect classes.</span>
+            </div>
+          </div>
+          <div style="margin-top:0.6rem;">
+            <div style="font-size:0.77rem;font-weight:700;color:var(--text-secondary);margin-bottom:0.4rem;">
+              ⬜ Free Self-Study Windows (plain):
+            </div>
+            <div id="free-slots-list" style="display:flex;gap:0.35rem;flex-wrap:wrap;">
+              <span style="font-size:0.74rem;color:var(--text-muted);">Free slots appear after timetable is scanned.</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Re-Scheduler -->
+        <div class="glass-card" style="display:flex;flex-direction:column;justify-content:space-between;">
+          <div>
+            <h3 style="font-size:1.05rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.75rem;color:#C084FC;">
+              <i data-lucide="sparkles"></i> AI Dynamic Re-Scheduler
+            </h3>
+            <p style="font-size:0.79rem;color:var(--text-secondary);line-height:1.6;margin-bottom:0.75rem;">
+              Ranks subjects by exam proximity, attendance risk, and difficulty.
+              Fills <strong style="color:#F1F5F9;">free timetable slots</strong> with study sessions that never conflict with class hours.
+            </p>
+
+            <!-- Legend -->
+            <div style="background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:0.75rem 0.9rem;margin-bottom:0.75rem;">
+              <div style="font-size:0.72rem;font-weight:700;color:var(--text-secondary);margin-bottom:0.5rem;">SCHEDULE KEY</div>
+              <div class="tt-legend">
+                <div class="tt-legend-item">
+                  <div class="tt-legend-box" style="background:rgba(124,58,237,0.35);border:1.5px solid rgba(192,132,252,0.5);"></div>
+                  <span>College Class (occupied)</span>
+                </div>
+                <div class="tt-legend-item">
+                  <div class="tt-legend-box" style="background:transparent;border:1px solid rgba(255,255,255,0.14);"></div>
+                  <span>Free Self-Study Slot</span>
+                </div>
+                <div class="tt-legend-item">
+                  <div class="tt-legend-box" style="background:rgba(251,191,36,0.12);border:1px solid rgba(251,191,36,0.3);"></div>
+                  <span>Lunch Break</span>
+                </div>
+              </div>
+            </div>
+
+            <div id="regen-status" style="display:none;font-size:0.77rem;padding:0.45rem 0.7rem;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:8px;color:#34D399;margin-bottom:0.65rem;">
+              ✅ Schedule saved to database!
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:0.55rem;">
+            <button class="btn btn-primary" onclick="rebuildStudyPlan()">
+              <i data-lucide="rotate-ccw"></i> Auto-Generate Study Schedule
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="promptAddBlock()">
+              <i data-lucide="plus"></i> Add Custom Block
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="exportSchedulePDF()">
+              <i data-lucide="download"></i> Export as PDF
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════
+           WEEKLY TIMETABLE GRID (VIT-Style)
+           Colored = class occupied  |  Plain = free/study
+           ════════════════════════════════════════════════════════ -->
+      <div class="glass-card" style="margin-bottom:1.75rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.5rem;">
+          <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;color:var(--text-primary);">
+            <i data-lucide="table-2"></i> Weekly Timetable Grid
+          </h3>
+          <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+            <span style="font-size:0.72rem;color:var(--text-muted);">Click a free slot to see study details ↓</span>
+            <button class="btn btn-secondary btn-sm" onclick="rebuildStudyPlan()" title="Regenerate">
+              <i data-lucide="refresh-cw"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="tt-wrap">
+          <table class="tt-table" id="tt-grid-table">
+            <thead id="tt-grid-head"></thead>
+            <tbody id="tt-grid-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ════════════════════════════════════════════════════════
+           DAILY DETAIL VIEW (below grid)
+           Shows the timeline for the selected day
+           ════════════════════════════════════════════════════════ -->
+      <div class="glass-card" style="margin-bottom:1.75rem;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem;flex-wrap:wrap;gap:0.65rem;">
+          <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;color:var(--text-primary);">
+            <i data-lucide="calendar-days"></i> Day Detail: <span id="active-day-label" style="color:#C084FC;margin-left:0.3rem;"></span>
+          </h3>
+          <div style="display:flex;gap:0.35rem;flex-wrap:wrap;" id="day-tab-row"></div>
+        </div>
+        <div id="day-schedule-list" style="display:flex;flex-direction:column;gap:0;min-height:80px;"></div>
+      </div>
+
+      <!-- Bottom Row: Deadlines + Pomodoro -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;">
+
+        <!-- Deadlines -->
+        <div class="glass-card">
+          <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:0.85rem;color:#FBBF24;">
+            <i data-lucide="alert-circle"></i> Upcoming Exams &amp; Deadlines
+          </h3>
+          <div id="deadlines-list" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+        </div>
+
+        <!-- Pomodoro Timer -->
+        <div class="glass-card">
+          <h3 style="font-size:1rem;display:flex;align-items:center;gap:0.5rem;margin-bottom:1rem;color:#34D399;">
+            <i data-lucide="timer"></i> Pomodoro Focus Timer
+          </h3>
+
+          <div style="display:flex;align-items:center;gap:1.25rem;margin-bottom:0.85rem;">
+            <div>
+              <div class="pomo-display" id="pomo-display">25:00</div>
+              <div class="pomo-mode" id="pomo-mode">Focus Session</div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:0.4rem;">
+              <button class="pomo-btn-start" id="pomo-toggle-btn" onclick="pomodoroToggle()">▶ Start</button>
+              <button class="pomo-btn-reset" onclick="pomodoroReset()" title="Reset">🔄</button>
+            </div>
+          </div>
+
+          <!-- Session dots -->
+          <div style="display:flex;align-items:center;gap:0.45rem;margin-bottom:0.55rem;">
+            <span style="font-size:0.73rem;color:var(--text-muted);">Sessions:</span>
+            <div style="display:flex;gap:0.3rem;">
+              <div class="pomo-dot" id="pd0"></div>
+              <div class="pomo-dot" id="pd1"></div>
+              <div class="pomo-dot" id="pd2"></div>
+              <div class="pomo-dot" id="pd3"></div>
+            </div>
+            <span style="font-size:0.73rem;color:#94A3B8;" id="pomo-sess-lbl">0 / 4</span>
+          </div>
+
+          <!-- Progress bar -->
+          <div style="height:5px;background:rgba(255,255,255,0.07);border-radius:3px;overflow:hidden;margin-bottom:0.65rem;">
+            <div id="pomo-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#10B981,#38BDF8);border-radius:3px;transition:width 0.9s linear;"></div>
+          </div>
+
+          <!-- Duration pickers -->
+          <div style="display:flex;gap:0.35rem;flex-wrap:wrap;">
+            <button class="dur-btn active" id="dur-25" onclick="pomodoroSetDuration(25)">25 min</button>
+            <button class="dur-btn" id="dur-50" onclick="pomodoroSetDuration(50)">50 min</button>
+            <button class="dur-btn" id="dur-15" onclick="pomodoroSetDuration(15)">15 min</button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <a href="index.html" class="nav-logo">
+          <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+          <span>Study<span class="gradient-text">Planner.AI</span></span>
+        </a>
+        <ul class="footer-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="attendance.html">Attendance</a></li>
+          <li><a href="register.html">Register Student</a></li>
+          <li><a href="planner.html">Planner</a></li>
+        </ul>
+      </div>
+      <div class="copyright">&copy; 2026 Personal Study Planner Agent — Team Pall_AIX</div>
+    </div>
+  </footer>
+
+  <script src="db.js?v=4.2"></script>
+  <script src="ocr-timetable.js?v=4.2"></script>
+  <script src="study-planner.js?v=4.2"></script>
+  <script src="app.js?v=4.2"></script>
+
+  <script>
+    /* ════════════════════════════════════════════════════════════
+       STUDY PLANNER v4.2 — VIT-style timetable grid controller
+       ════════════════════════════════════════════════════════════ */
+
+    /* ── Standard time columns (VIT / typical college schedule) ── */
+    const TIME_COLS = [
+      { key:'T1', start:'08:30', end:'10:00', label:'08:30\n10:00' },
+      { key:'T2', start:'10:05', end:'11:35', label:'10:05\n11:35' },
+      { key:'T3', start:'11:40', end:'13:10', label:'11:40\n13:10' },
+      { key:'LN', start:'13:10', end:'13:15', label:'Lunch',   isLunch:true },
+      { key:'T4', start:'13:15', end:'14:45', label:'13:15\n14:45' },
+      { key:'T5', start:'14:50', end:'16:20', label:'14:50\n16:20' },
+      { key:'T6', start:'16:25', end:'17:55', label:'16:25\n17:55' },
+      { key:'T7', start:'18:00', end:'19:30', label:'18:00\n19:30' },
+    ];
+
+    const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+
+    let activeDayIndex = (() => {
+      let d = new Date().getDay();
+      return d === 0 ? 6 : d - 1;
+    })();
+
+    /* ── Bootstrap ─────────────────────────────────────────────── */
+    document.addEventListener('DOMContentLoaded', () => {
+      initPlannerStudentHeader();
+      ensureDefaultSubjectsExist();
+      loadPersistedTimetable();
+      renderTimetableGrid();
+      renderDayTabs();
+      renderDayDetail();
+      renderDeadlines();
+      setupDropZone();
+    });
+
+    function ensureDefaultSubjectsExist() {
+      const s = AppDB.getSubjects();
+      if (!s || s.length === 0) {
+        AppDB.addSubject({ name:'Mathematics',     priority:'High',     attendance:85 });
+        AppDB.addSubject({ name:'Computer Science', priority:'Critical', attendance:70 });
+        AppDB.addSubject({ name:'Physics',          priority:'Normal',   attendance:90 });
+        AppDB.addSubject({ name:'Data Structures',  priority:'High',     attendance:78 });
+      }
+    }
+
+    function initPlannerStudentHeader() {
+      const user = AppDB.getUser();
+      const el   = document.getElementById('planner-student-badge');
+      if (el && user && user.name)
+        el.innerHTML = `🎓 Student: <strong>${user.name}</strong> (${user.id||'—'}) · ${user.department||''} ${user.semester||''}`;
+    }
+
+    /* ── Drop zone ──────────────────────────────────────────────── */
+    function setupDropZone() {
+      const dz = document.getElementById('ocr-drop-zone');
+      if (!dz) return;
+      dz.addEventListener('dragover',  e => { e.preventDefault(); dz.style.borderColor='#10B981'; dz.style.background='rgba(16,185,129,0.08)'; });
+      dz.addEventListener('dragleave', e => { e.preventDefault(); dz.style.borderColor='rgba(56,189,248,0.35)'; dz.style.background='rgba(56,189,248,0.04)'; });
+      dz.addEventListener('drop',      e => { e.preventDefault(); dz.style.borderColor='rgba(56,189,248,0.35)'; dz.style.background='rgba(56,189,248,0.04)'; handleOCRUpload(e); });
+    }
+
+    /* ── Load persisted timetable ───────────────────────────────── */
+    function loadPersistedTimetable() {
+      let tt = AppDB.getTimetable();
+      if (!tt || !tt.lectures || tt.lectures.length === 0) {
+        const subjects = AppDB.getSubjects();
+        if (subjects && subjects.length > 0) {
+          tt = OCRTimetableScanner.generateFallbackSchedule();
+          AppDB.saveTimetable(tt);
+        } else return;
+      }
+      renderLectureChips(tt.lectures);
+      renderFreeSlotBadges(tt.freeSlots);
+      if (tt.imageUrl) {
+        const p = document.getElementById('ocr-img-preview');
+        const t = document.getElementById('ocr-img-tag');
+        if (p && t) { t.src = tt.imageUrl; p.style.display = 'block'; }
+      }
+    }
+
+    /* ── OCR Upload ─────────────────────────────────────────────── */
+    async function handleOCRUpload(e) {
+      let file = null;
+      if (e instanceof File)             file = e;
+      else if (e?.target?.files?.length) file = e.target.files[0];
+      else if (e?.dataTransfer?.files?.length) file = e.dataTransfer.files[0];
+      if (!file) return;
+
+      const fi = document.getElementById('ocr-file-input');
+      const resetInput = () => { if (fi) fi.value = ''; };
+
+      const allowedExt = ['jpg','jpeg','png','webp','pdf','bmp','tiff'];
+      const ext = file.name.split('.').pop().toLowerCase();
+      if (!allowedExt.includes(ext)) {
+        if (typeof showToast==='function') showToast(`⚠️ Unsupported file type "${ext.toUpperCase()}"`);
+        resetInput(); return;
+      }
+
+      const fmt = b => b<1024?b+' B':b<1048576?(b/1024).toFixed(1)+' KB':(b/1048576).toFixed(1)+' MB';
+      const statusBox = document.getElementById('ocr-status-box');
+      const msgEl = document.getElementById('ocr-msg');
+      const barEl = document.getElementById('ocr-progress-bar');
+      if (statusBox) statusBox.style.display = 'block';
+      if (msgEl) msgEl.textContent = `Scanning ${file.name} (${fmt(file.size)})…`;
+      if (barEl) barEl.style.width = '0%';
+
+      let fileDataUrl = null;
+      const preview = document.getElementById('ocr-img-preview');
+      const imgTag  = document.getElementById('ocr-img-tag');
+      const pdfTag  = document.getElementById('pdf-name-tag');
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = ev => {
+          fileDataUrl = ev.target.result;
+          if (preview && imgTag) { imgTag.src = fileDataUrl; imgTag.style.display='block'; if(pdfTag)pdfTag.style.display='none'; preview.style.display='block'; }
+        };
+        reader.readAsDataURL(file);
+      } else if (ext==='pdf') {
+        if (preview) preview.style.display='block';
+        if (imgTag)  imgTag.style.display='none';
+        if (pdfTag)  { pdfTag.textContent=`📄 PDF: ${file.name} (${fmt(file.size)})`; pdfTag.style.display='block'; }
+      }
+
+      const chips = document.getElementById('lecture-chips');
+      const slots = document.getElementById('free-slots-list');
+      if (chips) chips.innerHTML='<span style="font-size:0.74rem;color:var(--text-muted);">Scanning…</span>';
+      if (slots) slots.innerHTML='<span style="font-size:0.74rem;color:var(--text-muted);">Calculating…</span>';
+
+      const result = await OCRTimetableScanner.scanTimetableImage(file, ({message,progress}) => {
+        if (msgEl) msgEl.textContent = message;
+        if (barEl) barEl.style.width = (progress*100)+'%';
+      });
+
+      if (statusBox) statusBox.style.display='none';
+
+      const finalData = (result && result.lectures && result.lectures.length>0)
+        ? result : OCRTimetableScanner.generateFallbackSchedule();
+
+      AppDB.saveTimetable({ lectures:finalData.lectures, freeSlots:finalData.freeSlots, imageUrl:fileDataUrl, fileName:file.name });
+      renderLectureChips(finalData.lectures);
+      renderFreeSlotBadges(finalData.freeSlots);
+
+      if (typeof showToast==='function')
+        showToast(`✅ Timetable processed: ${finalData.lectures.length} class slots detected!`);
+
+      rebuildStudyPlan();
+      resetInput();
+    }
+
+    function renderLectureChips(lectures) {
+      const box = document.getElementById('lecture-chips');
+      if (!box) return;
+      if (!lectures || lectures.length===0) { box.innerHTML='<span style="font-size:0.74rem;color:var(--text-muted);">No classes detected.</span>'; return; }
+      box.innerHTML = lectures.map(l=>
+        `<span class="cls-chip">${l.day} ${l.start}–${l.end} · ${l.subject.slice(0,16)}</span>`
+      ).join('');
+    }
+
+    function renderFreeSlotBadges(slots) {
+      const box = document.getElementById('free-slots-list');
+      if (!box) return;
+      if (!slots || slots.length===0) { box.innerHTML='<span style="font-size:0.74rem;color:var(--text-muted);">No free slots detected.</span>'; return; }
+      box.innerHTML = slots.map(s=>`<span class="fs-badge">${s.day} ${s.start}–${s.end}</span>`).join('');
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       STUDY PLAN GENERATION
+       ════════════════════════════════════════════════════════════ */
+    function rebuildStudyPlan() {
+      const timetable = AppDB.getTimetable();
+      const subjects  = AppDB.getSubjects();
+      if (!subjects || subjects.length===0) {
+        if (typeof showToast==='function') showToast('ℹ️ Add subjects in AI Studio first.');
+        return;
+      }
+      const freeSlots = (timetable && timetable.freeSlots && timetable.freeSlots.length>0)
+        ? timetable.freeSlots : [];
+      const generated = AIStudyPlanner.generateSchedule(subjects, freeSlots, DAYS);
+      const plan = generated.schedule || generated;
+      AppDB.saveStudyPlan(plan);
+
+      const badge = document.getElementById('regen-status');
+      if (badge) { badge.style.display='block'; setTimeout(()=>badge.style.display='none',2500); }
+
+      renderTimetableGrid();
+      renderDayDetail();
+      if (typeof showToast==='function') showToast('⚡ AI Study Schedule regenerated & saved!');
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       TIMETABLE GRID RENDERER
+       Rows = Days,  Columns = Time Slots
+       Colored cell = class occupied
+       Plain cell   = free / AI study slot
+       ════════════════════════════════════════════════════════════ */
+    function renderTimetableGrid() {
+      const timetable  = AppDB.getTimetable();
+      const studyPlan  = AppDB.getStudyPlan();
+      const lectures   = (timetable && timetable.lectures) ? timetable.lectures : [];
+      const gridDays   = DAYS.filter(d => d !== 'Sun'); // Show Mon–Sat in grid
+
+      // ── Build header ──────────────────────────────────────────
+      const thead = document.getElementById('tt-grid-head');
+      if (!thead) return;
+      let headerHTML = '<tr><th class="tt-hdr-day">Day</th>';
+      TIME_COLS.forEach(col => {
+        const cls = col.isLunch ? ' tt-hdr-lunch' : '';
+        const lbl = col.label.replace('\n','<br>');
+        headerHTML += `<th class="${cls}">${lbl}</th>`;
+      });
+      headerHTML += '</tr>';
+      thead.innerHTML = headerHTML;
+
+      // ── Build body rows ───────────────────────────────────────
+      const tbody = document.getElementById('tt-grid-body');
+      if (!tbody) return;
+
+      let bodyHTML = '';
+      gridDays.forEach(day => {
+        // Get class lectures for this day
+        const dayLectures = lectures.filter(l => l.day === day);
+        // Get study plan blocks for this day
+        const dayStudy = (studyPlan && studyPlan[day]) ? studyPlan[day] : [];
+
+        bodyHTML += `<tr>`;
+        bodyHTML += `<td class="tt-day-cell">${day.toUpperCase()}</td>`;
+
+        TIME_COLS.forEach(col => {
+          if (col.isLunch) {
+            bodyHTML += `<td class="tt-cell lunch-slot">🍽️<br>Lunch</td>`;
+            return;
+          }
+
+          // Check if a lecture occupies this slot
+          const classHit = dayLectures.find(l => timesOverlap(l.start, l.end, col.start, col.end));
+
+          if (classHit) {
+            // OCCUPIED / CLASS SLOT — colored
+            bodyHTML += `
+              <td class="tt-cell class-slot" title="${classHit.subject} · ${classHit.room||''} · ${classHit.start}–${classHit.end}">
+                <div class="tt-course">${classHit.subject.slice(0,22)}</div>
+                ${classHit.room ? `<div class="tt-room">${classHit.room}</div>` : ''}
+              </td>`;
+          } else {
+            // FREE SLOT — check if study block assigned
+            const studyHit = dayStudy.find(b => timesOverlap(b.start || extractStart(b.time), b.end || extractEnd(b.time), col.start, col.end));
+            if (studyHit) {
+              const prioColors = { Critical:'#EF4444', High:'#FBBF24', Normal:'#94A3B8' };
+              const pcolor = prioColors[studyHit.priority] || '#94A3B8';
+              bodyHTML += `
+                <td class="tt-cell study-slot" onclick="switchDayAndScroll('${day}')"
+                    title="Self-Study: ${studyHit.subject} · ${studyHit.time||''} · Click for details">
+                  <div class="tt-study-subj" style="color:${pcolor};">${studyHit.subject.slice(0,16)}</div>
+                  <div class="tt-study-type">${(studyHit.sessionType||'Study').split(' ')[0]}</div>
+                </td>`;
+            } else {
+              // Truly free / empty
+              bodyHTML += `<td class="tt-cell empty-slot"></td>`;
+            }
+          }
+        });
+
+        bodyHTML += `</tr>`;
+      });
+
+      tbody.innerHTML = bodyHTML;
+    }
+
+    /* ── Time overlap helper ───────────────────────────────────── */
+    function timesOverlap(s1, e1, s2, e2) {
+      return toMins(s1) < toMins(e2) && toMins(e1) > toMins(s2);
+    }
+    function toMins(t) {
+      if (!t) return 0;
+      const [h,m] = t.split(':').map(Number);
+      return (h||0)*60+(m||0);
+    }
+    function extractStart(ts) { if (!ts) return '08:00'; const m=ts.match(/(\d{1,2}:\d{2})/); return m?m[1]:'08:00'; }
+    function extractEnd(ts)   { if (!ts) return '10:00'; const m=ts.match(/(\d{1,2}:\d{2})/g); return m&&m[1]?m[1]:'10:00'; }
+
+    /* ── Switch day from grid click ────────────────────────────── */
+    function switchDayAndScroll(day) {
+      const idx = DAYS.indexOf(day);
+      if (idx >= 0) {
+        activeDayIndex = idx;
+        renderDayTabs();
+        renderDayDetail();
+        document.getElementById('day-schedule-list')?.scrollIntoView({ behavior:'smooth', block:'nearest' });
+      }
+    }
+
+    /* ── Day Tabs ────────────────────────────────────────────────── */
+    function renderDayTabs() {
+      const row = document.getElementById('day-tab-row');
+      if (!row) return;
+      row.innerHTML = DAYS.map((d,i)=>
+        `<button class="btn btn-secondary btn-sm day-tab-btn ${i===activeDayIndex?'active':''}"
+          onclick="switchDay(${i})">${d}</button>`
+      ).join('');
+      const lbl = document.getElementById('active-day-label');
+      if (lbl) lbl.textContent = DAYS[activeDayIndex];
+    }
+
+    function switchDay(idx) {
+      activeDayIndex = idx;
+      renderDayTabs();
+      renderDayDetail();
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       DAY DETAIL VIEW (below grid)
+       Merged timeline: class rows (colored) + study rows (plain)
+       ════════════════════════════════════════════════════════════ */
+    function renderDayDetail() {
+      const container = document.getElementById('day-schedule-list');
+      if (!container) return;
+
+      const day       = DAYS[activeDayIndex];
+      const timetable = AppDB.getTimetable();
+      const planData  = AppDB.getStudyPlan();
+
+      const classSlots = (timetable && timetable.lectures)
+        ? timetable.lectures.filter(l => l.day === day) : [];
+      let studyBlocks  = (planData && planData[day]) ? planData[day] : [];
+
+      // Auto-generate if empty
+      if (studyBlocks.length === 0) {
+        const subjects = AppDB.getSubjects();
+        if (subjects && subjects.length > 0) {
+          const freeSlots = (timetable && timetable.freeSlots) ? timetable.freeSlots : [];
+          const gen = AIStudyPlanner.generateSchedule(subjects, freeSlots, DAYS);
+          const plan = gen.schedule || gen;
+          AppDB.saveStudyPlan(plan);
+          studyBlocks = plan[day] || [];
+        }
+      }
+
+      if (classSlots.length === 0 && studyBlocks.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center;padding:2.5rem 1rem;color:var(--text-muted);font-size:0.85rem;">
+            No schedule for <strong style="color:var(--text-secondary);">${day}</strong>.
+            <button onclick="rebuildStudyPlan()" style="background:none;border:none;color:#38BDF8;cursor:pointer;font-weight:600;">⚡ Auto-Generate</button>
+          </div>`;
+        return;
+      }
+
+      // Merge into unified sorted timeline
+      const entries = [
+        ...classSlots.map(l => ({ _type:'class', _start:toMins(l.start), time:`${l.start} – ${l.end}`, subject:l.subject, room:l.room||'' })),
+        ...studyBlocks.map((b,idx) => ({ _type:'study', _idx:idx, _start:toMins(b.start||extractStart(b.time)), time:b.time||(b.start+' – '+b.end), subject:b.subject||'Study', priority:b.priority||'Normal', description:b.description||b.sessionType||'Core topic review', done:!!(b.done||b.completed) }))
+      ].sort((a,b) => a._start - b._start);
+
+      const PC = { Critical:'#EF4444', High:'#FBBF24', Normal:'#34D399' };
+
+      container.innerHTML = entries.map(entry => {
+        if (entry._type === 'class') {
+          return `
+          <div class="detail-row class-row">
+            <div class="detail-time">${entry.time}</div>
+            <div class="detail-body">
+              <span style="font-size:0.68rem;padding:2px 8px;border-radius:6px;background:rgba(124,58,237,0.2);color:#C084FC;border:1px solid rgba(124,58,237,0.4);font-weight:700;flex-shrink:0;">📚 CLASS</span>
+              <strong style="font-size:0.9rem;color:#DDD6FE;">${entry.subject}</strong>
+              ${entry.room?`<span style="font-size:0.74rem;color:#7C3AED;">${entry.room}</span>`:''}
+            </div>
+          </div>`;
+        } else {
+          const pc = PC[entry.priority]||'#38BDF8';
+          return `
+          <div class="detail-row study-row ${entry.done?'done-row':''}" id="sr-${entry._idx}">
+            <div class="detail-time" style="color:#94A3B8;">${entry.time}</div>
+            <div class="detail-body">
+              <div style="flex:1;min-width:0;">
+                <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:0.15rem;">
+                  <strong style="font-size:0.89rem;${entry.done?'text-decoration:line-through;color:#475569;':'color:var(--text-primary);'}">${entry.subject}</strong>
+                  <span style="font-size:0.67rem;padding:2px 7px;border-radius:6px;background:rgba(255,255,255,0.04);color:${pc};flex-shrink:0;">${entry.priority}</span>
+                </div>
+                <div style="font-size:0.78rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${entry.description}</div>
+              </div>
+              <div style="display:flex;gap:0.3rem;flex-shrink:0;margin-left:0.5rem;">
+                <button class="action-btn" onclick="toggleBlockDone('${day}',${entry._idx})">${entry.done?'↩️':'✅'}</button>
+                <button class="action-btn" onclick="editBlock('${day}',${entry._idx})">✏️</button>
+                <button class="action-btn" onclick="deleteBlock('${day}',${entry._idx})">🗑️</button>
+              </div>
+            </div>
+          </div>`;
+        }
+      }).join('');
+    }
+
+    /* ── Block CRUD ──────────────────────────────────────────────── */
+    function toggleBlockDone(day, idx) {
+      let plan = AppDB.getStudyPlan();
+      if (!plan[day]||!plan[day][idx]) return;
+      const was = !!(plan[day][idx].done||plan[day][idx].completed);
+      plan[day][idx].done = plan[day][idx].completed = !was;
+      AppDB.saveStudyPlan(plan);
+      renderDayDetail();
+    }
+    function editBlock(day, idx) {
+      let plan = AppDB.getStudyPlan();
+      const b = plan[day]&&plan[day][idx]; if(!b) return;
+      const v = prompt('Edit study topic:', b.description||b.topic||b.subject);
+      if (v!==null&&v.trim()) { b.description=b.topic=v.trim(); AppDB.saveStudyPlan(plan); renderDayDetail(); if(typeof showToast==='function')showToast('✏️ Block updated!'); }
+    }
+    function deleteBlock(day, idx) {
+      let plan = AppDB.getStudyPlan();
+      if(plan[day]){plan[day].splice(idx,1);AppDB.saveStudyPlan(plan);renderDayDetail();renderTimetableGrid();if(typeof showToast==='function')showToast('🗑️ Block deleted!');}
+    }
+    function promptAddBlock() {
+      const subj=prompt('Subject name:',''); if(!subj||!subj.trim())return;
+      const topic=prompt('Topic / Goal:','Study session');
+      const time=prompt('Time slot (e.g. 16:00 – 18:00):','16:00 – 18:00');
+      const prio=prompt('Priority (Normal / High / Critical):','Normal');
+      const parts=(time||'16:00 – 18:00').split(/\s*[–\-]\s*/);
+      let plan=AppDB.getStudyPlan(); if(!plan)plan={};
+      const day=DAYS[activeDayIndex]; if(!plan[day])plan[day]=[];
+      plan[day].push({time:time||'16:00 – 18:00',start:parts[0]||'16:00',end:parts[1]||'18:00',subject:subj.trim(),description:topic||'Study session',topic:topic||'Study session',priority:prio||'Normal',done:false,completed:false});
+      AppDB.saveStudyPlan(plan);renderDayDetail();renderTimetableGrid();if(typeof showToast==='function')showToast('✅ Block added!');
+    }
+
+    /* ── Deadlines ───────────────────────────────────────────────── */
+    function renderDeadlines() {
+      const box=document.getElementById('deadlines-list'); if(!box)return;
+      const subs=AppDB.getSubjects();
+      if(!subs||subs.length===0){box.innerHTML=`<div style="font-size:0.82rem;color:var(--text-muted);">No subjects yet. <a href="studio.html" style="color:#38BDF8;">Add subjects →</a></div>`;return;}
+      const withDates=subs.filter(s=>s.examDate);
+      if(withDates.length===0){box.innerHTML=`<div style="font-size:0.82rem;color:var(--text-muted);">No exam dates set. Edit subjects to add dates.</div>`;return;}
+      const sorted=[...withDates].sort((a,b)=>new Date(a.examDate)-new Date(b.examDate));
+      const PC={Critical:['rgba(239,68,68,0.15)','#EF4444','rgba(239,68,68,0.3)'],High:['rgba(245,158,11,0.15)','#FBBF24','rgba(245,158,11,0.3)'],Normal:['rgba(56,189,248,0.12)','#38BDF8','rgba(56,189,248,0.25)']};
+      box.innerHTML=sorted.map(s=>{
+        const c=PC[s.priority]||PC.Normal;
+        const d=Math.max(0,Math.ceil((new Date(s.examDate)-new Date())/86400000));
+        return `<div style="padding:0.65rem 0.8rem;background:${c[0]};border:1px solid ${c[2]};border-radius:10px;display:flex;justify-content:space-between;align-items:center;">
+          <div><strong style="font-size:0.87rem;color:var(--text-primary);">${s.name}</strong><div style="font-size:0.72rem;color:var(--text-muted);margin-top:0.1rem;">📅 ${s.examDate} — ${d>0?d+' days left':'Today!'}</div></div>
+          <span style="font-size:0.71rem;padding:2px 8px;border-radius:7px;background:${c[0]};color:${c[1]};border:1px solid ${c[2]};">${s.priority}</span></div>`;
+      }).join('');
+    }
+
+    /* ════════════════════════════════════════════════════════════
+       POMODORO FOCUS TIMER — fully scoped IIFE, zero conflicts
+       ════════════════════════════════════════════════════════════ */
+    (function() {
+      let durMins      = 25;
+      let totalSecs    = 25*60;
+      let secsLeft     = 25*60;
+      let running      = false;
+      let intervalId   = null;
+      let doneSessions = 0;
+      const MAX_SESS   = 4;
+
+      window.pomodoroToggle = function() {
+        const btn = document.getElementById('pomo-toggle-btn');
+        if (running) {
+          clearInterval(intervalId);
+          running = false;
+          if (btn) { btn.textContent='▶ Resume'; btn.className='pomo-btn-start'; }
+        } else {
+          running = true;
+          if (btn) { btn.textContent='⏸ Pause'; btn.className='pomo-btn-pause'; }
+          intervalId = setInterval(() => {
+            secsLeft--;
+            _draw();
+            if (secsLeft <= 0) {
+              clearInterval(intervalId);
+              running = false;
+              doneSessions = Math.min(doneSessions+1, MAX_SESS);
+              _dots();
+              if (typeof AppDB !== 'undefined') {
+                if (AppDB.logPomodoro) AppDB.logPomodoro('Focus Session', durMins);
+                if (AppDB.addXP)       AppDB.addXP(durMins * 2);
+              }
+              if (typeof showToast==='function')
+                showToast(`🎉 ${durMins}-min focus session done! ${durMins>=50?'Take a 15-min break.':'Take a 5-min break.'}`);
+              secsLeft = totalSecs;
+              _draw();
+              if (btn) { btn.textContent='▶ Start'; btn.className='pomo-btn-start'; }
+            }
+          }, 1000);
+        }
+      };
+
+      window.pomodoroReset = function() {
+        clearInterval(intervalId);
+        running = false;
+        secsLeft = totalSecs;
+        _draw();
+        const btn = document.getElementById('pomo-toggle-btn');
+        if (btn) { btn.textContent='▶ Start'; btn.className='pomo-btn-start'; }
+      };
+
+      window.pomodoroSetDuration = function(mins) {
+        if (running) return;
+        durMins = mins; totalSecs = mins*60; secsLeft = mins*60;
+        _draw();
+        const btn = document.getElementById('pomo-toggle-btn');
+        if (btn) { btn.textContent='▶ Start'; btn.className='pomo-btn-start'; }
+        [25,50,15].forEach(m => {
+          const b = document.getElementById(`dur-${m}`);
+          if (b) { b.className = m===mins ? 'dur-btn active' : 'dur-btn'; }
+        });
+        if (typeof showToast==='function') showToast(`⏱️ Timer set to ${mins} minutes.`);
+      };
+
+      function _draw() {
+        const m = Math.floor(secsLeft/60), s = secsLeft%60;
+        const d = document.getElementById('pomo-display');
+        const b = document.getElementById('pomo-bar');
+        const l = document.getElementById('pomo-mode');
+        if (d) d.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+        if (b) b.style.width = `${(secsLeft/totalSecs)*100}%`;
+        if (l) l.textContent = durMins>=50?'Deep Work Session':durMins===15?'Quick Focus':'Focus Session';
+      }
+      function _dots() {
+        for (let i=0;i<MAX_SESS;i++) { const d=document.getElementById(`pd${i}`); if(d) d.classList.toggle('filled',i<doneSessions); }
+        const l=document.getElementById('pomo-sess-lbl'); if(l) l.textContent=`${doneSessions} / ${MAX_SESS}`;
+      }
+
+      document.addEventListener('DOMContentLoaded',()=>{ _draw(); _dots(); });
+    })();
+
+    // Compatibility aliases
+    function toggleTimer()  { if(typeof pomodoroToggle==='function') pomodoroToggle(); }
+    function resetTimer()   { if(typeof pomodoroReset==='function')  pomodoroReset();  }
+
+    /* ── PDF Export ──────────────────────────────────────────────── */
+    function exportSchedulePDF() {
+      const plan = AppDB.getStudyPlan();
+      if (!plan||Object.keys(plan).length===0) { if(typeof showToast==='function')showToast('⚠️ No plan to export. Generate first.'); return; }
+      const w=window.open('','_blank'); if(!w)return;
+      const date=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
+      let body=`<h1>AI Weekly Study Schedule</h1><p>Generated: ${date}</p><hr>`;
+      DAYS.forEach(d=>{const b=(plan&&plan[d])?plan[d]:[];if(!b.length)return;body+=`<h3>${d}</h3><ul>`;b.forEach(bl=>{body+=`<li><strong>${bl.time||''}</strong> — ${bl.subject} | ${bl.description||bl.topic||''} [${bl.done?'Done ✅':'Pending'}]</li>`;});body+=`</ul>`;});
+      w.document.write(`<html><head><title>Study Plan</title><style>body{font-family:Arial,sans-serif;padding:2rem;}</style></head><body>${body}</body></html>`);
+      w.document.close(); setTimeout(()=>w.print(),400);
+    }
+  </script>
+
+  <script src="notifications.js?v=4.2"></script>
+</body>
+</html>

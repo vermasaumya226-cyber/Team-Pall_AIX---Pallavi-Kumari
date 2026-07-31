@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home | Personal Study Planner Agent — Pall_AIX</title>
+  <meta name="description" content="AI-powered academic assistant that manages timetables, assignments, attendance, exams, and study goals.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- PAGE TRANSITION OVERLAY -->
+  <div class="page-transition-overlay" id="page-transition">
+    <div class="page-transition-loader"></div>
+    <div style="font-family:var(--font-heading);font-weight:700;font-size:1.1rem;" class="gradient-text" id="page-trans-title">Loading Page…</div>
+  </div>
+
+  <canvas id="aurora-canvas"></canvas>
+  <div class="grid-overlay"></div>
+  <div class="mouse-glow" id="mouse-glow"></div>
+
+  <!-- NAVBAR -->
+  <nav class="navbar" id="navbar">
+    <div class="container nav-container">
+      <a href="index.html" class="nav-logo">
+        <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+        <span>Study<span class="gradient-text">Planner.AI</span></span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html" class="nav-link active">Home</a></li>
+        <li><a href="studio.html" class="nav-link" style="color:#38BDF8;font-weight:700;">AI Studio</a></li>
+        <li><a href="attendance.html" class="nav-link">Attendance</a></li>
+        <li><a href="register.html" class="nav-link" style="color:#10B981;">Register Student</a></li>
+        <li><a href="attendance-history.html" class="nav-link" style="color:#38BDF8;">History</a></li>
+        <li><a href="summarizer.html" class="nav-link" style="color:#C084FC;">AI Summarizer</a></li>
+        <li><a href="planner.html" class="nav-link">Study Planner</a></li>
+        <li><a href="dashboard.html" class="nav-link">Dashboard</a></li>
+        <li><a href="analytics.html" class="nav-link">Analytics</a></li>
+      </ul>
+      <a href="studio.html" class="btn btn-primary">
+        <i data-lucide="cpu"></i> Open AI Studio
+      </a>
+    </div>
+  </nav>
+
+  <!-- HERO SECTION -->
+  <section class="hero-section" id="hero">
+    <div class="container hero-grid">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="pulse-dot"></span>
+          AI Agent Track • Team Pall_AIX
+        </div>
+        <h1 class="hero-title">Your AI Academic <br><span class="gradient-text">Companion</span></h1>
+        <p class="hero-subtitle">Plan smarter, study better, and never miss another deadline with an autonomous, attendance-aware Personal Study Planner Agent.</p>
+        <div class="hero-buttons">
+          <a href="studio.html" class="btn btn-primary">
+            <i data-lucide="sparkles"></i> Launch AI Studio
+          </a>
+          <button class="btn btn-secondary" onclick="openDemoModal()">
+            <i data-lucide="play-circle"></i> Watch Demo
+          </button>
+          <a href="planner.html" class="btn btn-secondary">
+            <i data-lucide="workflow"></i> AI Planner
+          </a>
+        </div>
+        <div style="display:flex;gap:2rem;border-top:1px solid var(--border-light);padding-top:1.25rem;">
+          <div><h4 class="gradient-text">99.4%</h4><p style="font-size:0.8rem;color:var(--text-muted);">Task Precision</p></div>
+          <div><h4 class="gradient-text">12.5 hrs</h4><p style="font-size:0.8rem;color:var(--text-muted);">Saved Weekly</p></div>
+          <div><h4 class="gradient-text">&lt;50ms</h4><p style="font-size:0.8rem;color:var(--text-muted);">Re-plan Speed</p></div>
+        </div>
+      </div>
+
+      <!-- Hologram AI Visual -->
+      <div class="hero-visual">
+        <div class="hologram-wrapper">
+          <div class="hologram-ring-1"></div>
+          <div class="hologram-ring-2"></div>
+          <a href="studio.html" class="hologram-core" title="Open AI Studio">
+            <i data-lucide="brain-circuit" style="width:70px;height:70px;color:#E9D5FF;"></i>
+          </a>
+          <a href="planner.html" class="floating-card card-pos-1">
+            <div class="fc-icon" style="background:rgba(124,58,237,0.2);color:#C084FC;"><i data-lucide="calendar"></i></div>
+            <div><strong>Timetable Sync</strong><div style="font-size:0.72rem;color:#94A3B8;">Auto-imported 18 hrs</div></div>
+          </a>
+          <a href="attendance.html" class="floating-card card-pos-2">
+            <div class="fc-icon" style="background:rgba(16,185,129,0.2);color:#34D399;"><i data-lucide="check-circle-2"></i></div>
+            <div><strong>Attendance Guard</strong><div style="font-size:0.72rem;color:#94A3B8;">Physics at 88.5%</div></div>
+          </a>
+          <a href="planner.html" class="floating-card card-pos-3">
+            <div class="fc-icon" style="background:rgba(245,158,11,0.2);color:#FBBF24;"><i data-lucide="alert-triangle"></i></div>
+            <div><strong>Exam Alert</strong><div style="font-size:0.72rem;color:#94A3B8;">Calculus in 3 Days</div></div>
+          </a>
+          <a href="studio.html" class="floating-card card-pos-4">
+            <div class="fc-icon" style="background:rgba(6,182,212,0.2);color:#38BDF8;"><i data-lucide="refresh-cw"></i></div>
+            <div><strong>Auto Re-Plan</strong><div style="font-size:0.72rem;color:#94A3B8;">Shifted to 6:00 PM</div></div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROBLEM SECTION -->
+  <section class="problem-section" id="problem">
+    <div class="container">
+      <div class="section-tag"><i data-lucide="alert-octagon"></i> The Student Reality</div>
+      <h2 class="section-title">Academic Overload Kills <span class="gradient-text">Productivity</span></h2>
+      <p class="section-subtitle">Modern students juggle 5+ platforms, unpredictable exam dates, and strict attendance minimums without intelligent scheduling tools.</p>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:center;">
+        <div class="glass-card">
+          <h3 style="margin-bottom:1.5rem;display:flex;align-items:center;gap:0.75rem;">
+            <i data-lucide="flame" style="color:#EF4444;"></i> Student Stress Index: 88/100
+          </h3>
+          <div style="margin-bottom:1.25rem;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem;font-weight:600;font-size:0.9rem;">
+              <span>Deadline Overload</span><span style="color:#EF4444;">Critical</span>
+            </div>
+            <div style="width:100%;height:10px;background:rgba(255,255,255,0.1);border-radius:5px;overflow:hidden;">
+              <div style="height:100%;width:88%;background:linear-gradient(90deg,#F59E0B,#EF4444);"></div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.85rem;">
+            <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:12px;padding:0.85rem;font-size:0.82rem;color:#FCA5A5;">
+              <i data-lucide="file-warning"></i> <strong>3 Missed Assignments</strong>
+            </div>
+            <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:12px;padding:0.85rem;font-size:0.82rem;color:#FCA5A5;">
+              <i data-lucide="user-x"></i> <strong>Attendance Shortage</strong>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+          <div class="glass-card" style="text-align:center;padding:1.5rem;">
+            <div class="gradient-text" style="font-size:2.5rem;font-weight:800;" id="counter-1">78%</div>
+            <p style="color:var(--text-secondary);font-size:0.82rem;">Students Miss Deadlines</p>
+          </div>
+          <div class="glass-card" style="text-align:center;padding:1.5rem;">
+            <div class="gradient-text-alt" style="font-size:2.5rem;font-weight:800;" id="counter-2">4.5h</div>
+            <p style="color:var(--text-secondary);font-size:0.82rem;">Sleep Lost Before Exams</p>
+          </div>
+          <div class="glass-card" style="text-align:center;padding:1.5rem;">
+            <div class="gradient-text-alt" style="font-size:2.5rem;font-weight:800;" id="counter-3">82%</div>
+            <p style="color:var(--text-secondary);font-size:0.82rem;">Attendance Tracking Gaps</p>
+          </div>
+          <div class="glass-card" style="text-align:center;padding:1.5rem;">
+            <div class="gradient-text" style="font-size:2.5rem;font-weight:800;" id="counter-4">3.8x</div>
+            <p style="color:var(--text-secondary);font-size:0.82rem;">Higher Academic Stress</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES SECTION -->
+  <section class="features-section" id="features">
+    <div class="container">
+      <div class="section-tag"><i data-lucide="layers"></i> Core Capabilities</div>
+      <h2 class="section-title">Engineered For <span class="gradient-text">Academic Perfection</span></h2>
+      <p class="section-subtitle">Six intelligent features working seamlessly together to eliminate study friction.</p>
+      <div class="features-grid">
+        <a href="planner.html" class="glass-card" style="text-decoration:none;">
+          <div style="width:48px;height:48px;border-radius:12px;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);display:flex;align-items:center;justify-content:center;color:#C084FC;font-size:1.4rem;margin-bottom:1rem;"><i data-lucide="calendar"></i></div>
+          <h3 style="font-size:1.1rem;margin-bottom:0.5rem;color:white;">Smart Weekly Planner</h3>
+          <p style="color:var(--text-secondary);font-size:0.9rem;">Auto-generates balanced daily study blocks synced with your college lectures.</p>
+        </a>
+        <a href="attendance.html" class="glass-card" style="text-decoration:none;">
+          <div style="width:48px;height:48px;border-radius:12px;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);display:flex;align-items:center;justify-content:center;color:#C084FC;font-size:1.4rem;margin-bottom:1rem;"><i data-lucide="shield-check"></i></div>
+          <h3 style="font-size:1.1rem;margin-bottom:0.5rem;color:white;">Attendance Guard</h3>
+          <p style="color:var(--text-secondary);font-size:0.9rem;">Monitors subject-wise attendance and alerts before crossing minimum thresholds.</p>
+        </a>
+        <a href="studio.html" class="glass-card" style="text-decoration:none;">
+          <div style="width:48px;height:48px;border-radius:12px;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);display:flex;align-items:center;justify-content:center;color:#C084FC;font-size:1.4rem;margin-bottom:1rem;"><i data-lucide="refresh-cw"></i></div>
+          <h3 style="font-size:1.1rem;margin-bottom:0.5rem;color:white;">Dynamic Rescheduling</h3>
+          <p style="color:var(--text-secondary);font-size:0.9rem;">Instantly rebalances your week when deadlines shift or new exams are announced.</p>
+        </a>
+        <a href="summarizer.html" class="glass-card" style="text-decoration:none;">
+          <div style="width:48px;height:48px;border-radius:12px;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);display:flex;align-items:center;justify-content:center;color:#C084FC;font-size:1.4rem;margin-bottom:1rem;"><i data-lucide="file-text"></i></div>
+          <h3 style="font-size:1.1rem;margin-bottom:0.5rem;color:white;">AI Notes Summarizer</h3>
+          <p style="color:var(--text-secondary);font-size:0.9rem;">Reads multi-page documents to generate cheat sheets, formulas, and flashcards.</p>
+        </a>
+        <a href="analytics.html" class="glass-card" style="text-decoration:none;">
+          <div style="width:48px;height:48px;border-radius:12px;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);display:flex;align-items:center;justify-content:center;color:#C084FC;font-size:1.4rem;margin-bottom:1rem;"><i data-lucide="bar-chart-3"></i></div>
+          <h3 style="font-size:1.1rem;margin-bottom:0.5rem;color:white;">Visual Analytics</h3>
+          <p style="color:var(--text-secondary);font-size:0.9rem;">Track study hours, attendance trends, and syllabus progress over time.</p>
+        </a>
+        <a href="dashboard.html" class="glass-card" style="text-decoration:none;">
+          <div style="width:48px;height:48px;border-radius:12px;background:rgba(124,58,237,0.15);border:1px solid rgba(124,58,237,0.3);display:flex;align-items:center;justify-content:center;color:#C084FC;font-size:1.4rem;margin-bottom:1rem;"><i data-lucide="gift"></i></div>
+          <h3 style="font-size:1.1rem;margin-bottom:0.5rem;color:white;">Gamification & Rewards</h3>
+          <p style="color:var(--text-secondary);font-size:0.9rem;">Earn study XP, level up, and unlock guilt-free break rewards as you study.</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- TEAM SECTION -->
+  <section class="team-section" id="team">
+    <div class="container" style="text-align:center;">
+      <div class="section-tag"><i data-lucide="users"></i> Project Creators</div>
+      <h2 class="section-title">Built By Team <span class="gradient-text">Pall_AIX</span></h2>
+      <p class="section-subtitle">AI Agent Track · AI Hackathon 2026</p>
+      <div class="team-card glass-card">
+        <div style="width:70px;height:70px;border-radius:18px;background:linear-gradient(135deg,var(--primary),var(--accent));margin:0 auto 1.25rem auto;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-glow-purple);">
+          <i data-lucide="award" style="width:38px;height:38px;color:white;"></i>
+        </div>
+        <h3 style="font-size:1.5rem;margin-bottom:0.4rem;">Personal Study Planner Agent</h3>
+        <p style="color:var(--text-secondary);margin-bottom:1.25rem;font-size:0.9rem;">Autonomous Academic Optimization Engine</p>
+        <a href="studio.html" class="btn btn-primary">
+          <i data-lucide="cpu"></i> Launch AI Studio
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <a href="index.html" class="nav-logo">
+          <div class="logo-icon"><i data-lucide="sparkles"></i></div>
+          <span>Study<span class="gradient-text">Planner.AI</span></span>
+        </a>
+        <ul class="footer-links">
+          <li><a href="index.html">Home</a></li>
+          <li><a href="studio.html">AI Studio</a></li>
+          <li><a href="attendance.html">Attendance</a></li>
+          <li><a href="summarizer.html">AI Summarizer</a></li>
+          <li><a href="planner.html">Planner</a></li>
+          <li><a href="dashboard.html">Dashboard</a></li>
+          <li><a href="analytics.html">Analytics</a></li>
+        </ul>
+      </div>
+      <div class="copyright">&copy; 2026 Personal Study Planner Agent — Team Pall_AIX · AI Agent Track · Hackathon 2026</div>
+    </div>
+  </footer>
+
+  <!-- DEMO MODAL -->
+  <div class="modal-overlay" id="demo-modal">
+    <div class="modal-content">
+      <button class="close-modal" onclick="closeDemoModal()">&times;</button>
+      <h3 style="font-size:1.3rem;margin-bottom:0.4rem;display:flex;align-items:center;gap:0.5rem;">
+        <i data-lucide="sparkles" style="color:#C084FC;"></i> Quick AI Plan Demo
+      </h3>
+      <p style="color:var(--text-secondary);font-size:0.85rem;margin-bottom:1.25rem;">Enter a subject to generate a sample prioritized schedule.</p>
+      <form id="demo-form" onsubmit="handleDemoSubmit(event)">
+        <div style="margin-bottom:0.85rem;">
+          <label style="display:block;font-size:0.8rem;color:#CBD5E1;margin-bottom:0.3rem;">Subject Name:</label>
+          <input type="text" id="input-subject" value="Quantum Computing & Applied Physics" class="form-control">
+        </div>
+        <div style="margin-bottom:1.25rem;">
+          <label style="display:block;font-size:0.8rem;color:#CBD5E1;margin-bottom:0.3rem;">Urgency Level:</label>
+          <select id="input-urgency" class="form-control">
+            <option value="critical">Critical — Exams in 2 Days</option>
+            <option value="high">High — Exams in 1 Week</option>
+            <option value="normal">Normal Semester Flow</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;"><i data-lucide="cpu"></i> Generate Sample Schedule</button>
+      </form>
+      <div id="demo-result" style="display:none;margin-top:1.25rem;padding:0.85rem;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:12px;">
+        <h4 style="color:#34D399;font-size:0.95rem;">✅ AI Schedule Ready!</h4>
+        <p id="demo-result-text" style="font-size:0.82rem;color:#CBD5E1;margin-top:0.3rem;"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="db.js"></script>
+  <script src="ocr-timetable.js"></script>
+  <script src="study-planner.js"></script>
+  <script src="chat-assistant.js"></script>
+  <script src="analytics-dashboard.js"></script>
+  <script src="notes-summarizer.js"></script>
+  <script src="face-recognition.js"></script>
+  <script src="app.js"></script>
+
+  <script src="notifications.js"></script>
+</body>
